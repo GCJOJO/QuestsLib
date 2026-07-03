@@ -6,6 +6,7 @@ import dev.architectury.event.events.common.EntityEvent;
 import dev.architectury.event.events.common.PlayerEvent;
 import dev.architectury.utils.value.IntValue;
 import io.github.gcjojo.questslib.events.QuestsEvents;
+import io.github.gcjojo.questslib.quests.tasks.CompositeTask;
 import io.github.gcjojo.questslib.quests.tasks.StatTask;
 import io.github.gcjojo.questslib.quests.tasks.StatTaskType;
 import net.minecraft.core.BlockPos;
@@ -80,14 +81,26 @@ public class QuestManager {
         QuestTask task = questData.getCurrentTask().orElse(null);
         if (task == null) return;
 
-        if (task.getTaskType() != TaskType.Stat) return;
+        if (task.getTaskType() == TaskType.Stat) {
+            StatTask statTask = (StatTask) task;
+            if (statTask.getStatType() != type || statTask.getTargetId() != targetId) return;
 
-        StatTask statTask = (StatTask) task;
-        if (statTask.getStatType() != type || statTask.getTargetId() != targetId) return;
+            if (!(questData.getCurrentTaskData() instanceof StatTask.StatTaskData statData)) return;
 
-        if (!(questData.getCurrentTaskData() instanceof StatTask.StatTaskData statData)) return;
+            statData.addAmount(amount);
+        } else if (task.getTaskType() == TaskType.Any || task.getTaskType() == TaskType.All) {
+            CompositeTask compositeTask = (CompositeTask) task;
 
-        statData.addAmount(amount);
+            compositeTask.getSubtasks().keySet().stream().filter(
+                    subtask -> subtask.getTaskType() == TaskType.Stat &&
+                            subtask instanceof StatTask statSubtask &&
+                            statSubtask.getStatType() == type &&
+                            statSubtask.getTargetId() == targetId).forEach(subtask -> {
+                if (!(questData.getCurrentTaskData() instanceof StatTask.StatTaskData statData)) return;
+                statData.addAmount(amount);
+            });
+        }
+
 
         QuestsEvents.TASK_PROGRESSION.invoker().taskProgression(player, questId, task.getTaskId());
 
