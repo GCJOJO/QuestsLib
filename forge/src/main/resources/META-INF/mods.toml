@@ -8,7 +8,7 @@ modId = "questslib"
 version = "${version}"
 displayName = "QuestsLib"
 authors = "GCJOJO"
-description = '''
+taskDescription = '''
 
 '''
 #logoFile = ""

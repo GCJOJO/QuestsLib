@@ -7,9 +7,10 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 
 @Mod(Questslib.MOD_ID)
 public final class QuestslibForge {
-    public QuestslibForge() {
+
+    public QuestslibForge(FMLJavaModLoadingContext context) {
         // Submit our event bus to let Architectury API register our content on the right time.
-        EventBuses.registerModEventBus(Questslib.MOD_ID, FMLJavaModLoadingContext.get().getModEventBus());
+        EventBuses.registerModEventBus(Questslib.MOD_ID, context.getModEventBus());
 
         // Run our common setup.
         Questslib.init();
