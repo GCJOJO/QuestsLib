@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "id": "questslib",
+  "version": "${version}",
+  "name": "QuestsLib",
+  "description": "",
+  "authors": [
+    "GCJOJO"
+  ],
+  "contact": {
+    "homepage": ""
+  },
+  "license": "MIT",
+  "icon": "assets/questslib/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "io.github.gcjojo.questslib.fabric.QuestslibFabric"
+    ],
+    "client": [
+      "io.github.gcjojo.questslib.fabric.client.QuestslibFabricClient"
+    ]
+  },
+  "mixins": [
+    "questslib.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.19.3",
+    "minecraft": "~1.20.1",
+    "java": ">=17",
+    "architectury": ">=9.2.14",
+    "fabric-api": "*"
+  },
+  "suggests": {
+    "another-mod": "*"
+  }
+}
