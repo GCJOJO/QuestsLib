@@ -1,7 +1,9 @@
 package io.github.gcjojo.questslib.quests.tasks;
 
+import com.google.gson.JsonObject;
 import io.github.gcjojo.questslib.quests.QuestTask;
-import io.github.gcjojo.questslib.quests.TaskType;
+import io.github.gcjojo.questslib.quests.enums.StatTaskType;
+import io.github.gcjojo.questslib.quests.enums.TaskType;
 import io.github.gcjojo.questslib.utils.MathUtils;
 import lombok.Getter;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -27,6 +29,21 @@ public class StatTask extends QuestTask {
         this.statType = type;
 
         this.taskDataClass = StatTaskData.class;
+    }
+
+    public StatTask(JsonObject object) {
+        super(object);
+
+        this.statType = StatTaskType.None;
+        this.targetId = null;
+        this.amount = 1;
+
+        if (object.has("stat_type"))
+            this.statType = StatTaskType.fromId(object.get("stat_type").getAsString());
+        if (object.has("target"))
+            this.targetId = ResourceLocation.tryParse(object.get("target").getAsString());
+        if (object.has("amount"))
+            this.amount = object.get("amount").getAsInt();
     }
 
     @Override

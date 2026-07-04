@@ -1,5 +1,8 @@
 package io.github.gcjojo.questslib.quests;
 
+import com.google.gson.JsonObject;
+import io.github.gcjojo.questslib.quests.enums.TaskType;
+import io.github.gcjojo.questslib.quests.factory.QuestTaskDataRegistry;
 import lombok.Getter;
 import lombok.NonNull;
 import net.minecraft.nbt.CompoundTag;
@@ -17,6 +20,15 @@ public abstract class QuestTask {
         this.taskId = taskId;
         this.taskName = taskName;
         this.taskDescription = taskDescription;
+    }
+
+    public QuestTask(JsonObject json) {
+        if (json.has("id"))
+            this.taskId = ResourceLocation.tryParse(json.get("id").getAsString());
+        if (json.has("name"))
+            this.taskName = Component.translatable(json.get("name").getAsString());
+        if (json.has("description"))
+            this.taskDescription = Component.translatable(json.get("description").getAsString());
     }
 
     public abstract TaskType getTaskType();

@@ -3,15 +3,22 @@ package io.github.gcjojo.questslib.quests;
 import dev.architectury.event.EventResult;
 import dev.architectury.event.events.common.BlockEvent;
 import dev.architectury.event.events.common.EntityEvent;
+import dev.architectury.event.events.common.LifecycleEvent;
 import dev.architectury.event.events.common.PlayerEvent;
+import dev.architectury.platform.Platform;
 import dev.architectury.utils.value.IntValue;
+import io.github.gcjojo.questslib.Questslib;
 import io.github.gcjojo.questslib.events.QuestsEvents;
+import io.github.gcjojo.questslib.quests.enums.QuestCompletionState;
+import io.github.gcjojo.questslib.quests.enums.StatTaskType;
+import io.github.gcjojo.questslib.quests.enums.TaskType;
 import io.github.gcjojo.questslib.quests.tasks.CompositeTask;
 import io.github.gcjojo.questslib.quests.tasks.StatTask;
-import io.github.gcjojo.questslib.quests.tasks.StatTaskType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
@@ -22,9 +29,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 public class QuestManager {
 
@@ -43,12 +48,22 @@ public class QuestManager {
 
     }
 
-    public static void loadQuests() {
+    public static void loadQuests(MinecraftServer server) {
+        List<String> namespaces = new ArrayList<>(Platform.getModIds());
+        namespaces.addAll(server.getResourceManager().getNamespaces());
 
+        namespaces.forEach(namespace -> {
+            quests.putAll(QuestLoader.loadQuestFile(server, namespace));
+        });
+        Questslib.getLogger().info("Loaded {} quest(s) !", quests.size());
     }
 
     public static Optional<Quest> getQuest(ResourceLocation questId) {
         return Optional.ofNullable(quests.getOrDefault(questId, null));
+    }
+
+    public static void onServerLevelLoad(ServerLevel serverLevel) {
+        loadQuests(serverLevel.getServer());
     }
 
     public static void onPlayerJoin(ServerPlayer player) {
@@ -61,6 +76,8 @@ public class QuestManager {
     }
 
     public static void initEvent() {
+        LifecycleEvent.SERVER_LEVEL_LOAD.register(QuestManager::onServerLevelLoad);
+
         PlayerEvent.PLAYER_JOIN.register(QuestManager::onPlayerJoin);
         PlayerEvent.PLAYER_QUIT.register(QuestManager::onPlayerLeave);
 
@@ -90,14 +107,17 @@ public class QuestManager {
             statData.addAmount(amount);
         } else if (task.getTaskType() == TaskType.Any || task.getTaskType() == TaskType.All) {
             CompositeTask compositeTask = (CompositeTask) task;
+            if (!(questData.getCurrentTaskData() instanceof CompositeTask.CompositeTaskData compositeData)) return;
 
             compositeTask.getSubtasks().keySet().stream().filter(
                     subtask -> subtask.getTaskType() == TaskType.Stat &&
                             subtask instanceof StatTask statSubtask &&
                             statSubtask.getStatType() == type &&
                             statSubtask.getTargetId() == targetId).forEach(subtask -> {
-                if (!(questData.getCurrentTaskData() instanceof StatTask.StatTaskData statData)) return;
-                statData.addAmount(amount);
+                compositeData.getSubtaskData(subtask.getTaskId()).ifPresent(subtaskData -> {
+                    if (!(subtaskData instanceof StatTask.StatTaskData subStatTaskData)) return;
+                    subStatTaskData.addAmount(amount);
+                });
             });
         }
 

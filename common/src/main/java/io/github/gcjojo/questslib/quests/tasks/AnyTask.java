@@ -1,4 +1,42 @@
 package io.github.gcjojo.questslib.quests.tasks;
 
-public class AnyTask {
+import io.github.gcjojo.questslib.quests.QuestTask;
+import io.github.gcjojo.questslib.quests.enums.TaskType;
+import io.github.gcjojo.questslib.utils.MathUtils;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import org.jetbrains.annotations.NotNull;
+
+import java.util.concurrent.atomic.AtomicInteger;
+
+public class AnyTask extends CompositeTask {
+    public AnyTask(ResourceLocation taskId, Component taskName, Component taskDescription) {
+        super(taskId, taskName, taskDescription);
+    }
+
+    @Override
+    public TaskType getTaskType() {
+        return null;
+    }
+
+    public static class AnyTaskData extends CompositeTaskData {
+
+        public AnyTaskData(@NotNull CompositeTask parentTask) {
+            super(parentTask);
+        }
+
+        @Override
+        public float getProgression() {
+            AtomicInteger completedSubtasks = new AtomicInteger(0);
+            task.getSubtasks().forEach((subtask, required) -> {
+                if (!required) return;
+                if (subtasksData.containsKey(subtask.getTaskId())) {
+                    QuestTaskData<? extends QuestTask> subtaskData = subtasksData.get(subtask.getTaskId());
+                    if (subtaskData.checkProgression()) completedSubtasks.set(completedSubtasks.get() + 1);
+                }
+            });
+
+            return MathUtils.clamp(completedSubtasks.get(), 0.0f, 1.0f);
+        }
+    }
 }

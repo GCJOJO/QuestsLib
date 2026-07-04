@@ -1,6 +1,7 @@
 package io.github.gcjojo.questslib.quests;
 
 import io.github.gcjojo.questslib.Questslib;
+import io.github.gcjojo.questslib.quests.enums.QuestCompletionState;
 import lombok.Getter;
 import net.minecraft.resources.ResourceLocation;
 
@@ -16,7 +17,7 @@ public class PlayerQuestData {
         this.questId = questId;
         this.completionState = QuestCompletionState.Started;
         this.currentTaskId = 0;
-        Quest quest = QuestManager.getQuest(this.questId);
+        Quest quest = QuestManager.getQuest(this.questId).orElse(null);
         QuestTask task;
         if (quest != null && (task = quest.getTask(currentTaskId)) != null)
             currentTaskData = task.getNewTaskData();
@@ -30,7 +31,7 @@ public class PlayerQuestData {
     }
 
     public void nextTask() {
-        Quest quest = QuestManager.getQuest(questId);
+        Quest quest = QuestManager.getQuest(questId).orElse(null);
         if (quest == null) return;
 
         if (++currentTaskId >= quest.getTaskAmount()) {
@@ -44,7 +45,7 @@ public class PlayerQuestData {
     }
 
     public Optional<QuestTask> getCurrentTask() {
-        Quest quest = QuestManager.getQuest(questId);
+        Quest quest = QuestManager.getQuest(questId).orElse(null);
 
         if (quest == null || currentTaskId >= quest.getTaskAmount()) return Optional.empty();
         return Optional.ofNullable(quest.getTask(currentTaskId));

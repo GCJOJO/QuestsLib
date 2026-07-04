@@ -1,4 +1,4 @@
-package io.github.gcjojo.questslib.quests;
+package io.github.gcjojo.questslib.quests.enums;
 
 public enum QuestCompletionState {
     None,

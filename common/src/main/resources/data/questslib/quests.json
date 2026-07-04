@@ -1,0 +1,17 @@
+[
+  {
+    "id": "questslib:quest_1",
+    "name": "my first quest",
+    "description": "this is my first quest",
+    "tasks": [
+      {
+        "task": "stat",
+        "id": "questslib:quest_1_collect_dirt",
+        "name": "Collect 10 dirt",
+        "stat_type": "item",
+        "target": "minecraft:dirt",
+        "amount": 10
+      }
+    ]
+  }
+]

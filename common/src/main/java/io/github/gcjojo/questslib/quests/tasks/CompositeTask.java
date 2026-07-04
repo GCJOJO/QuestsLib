@@ -1,8 +1,7 @@
 package io.github.gcjojo.questslib.quests.tasks;
 
 import io.github.gcjojo.questslib.quests.QuestTask;
-import io.github.gcjojo.questslib.quests.TaskType;
-import io.github.gcjojo.questslib.utils.MathUtils;
+import io.github.gcjojo.questslib.quests.enums.TaskType;
 import lombok.Getter;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -11,12 +10,12 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.Optional;
 
 @Getter
 public abstract class CompositeTask extends QuestTask {
 
-    // False means task is optional (only works for AllTask)
+    // False means task is optional
     private Map<QuestTask, Boolean> subtasks;
 
     public CompositeTask(ResourceLocation taskId, Component taskName, Component taskDescription) {
@@ -25,27 +24,20 @@ public abstract class CompositeTask extends QuestTask {
 
     public abstract TaskType getTaskType();
 
-    public static class CompositeTaskData extends QuestTaskData<CompositeTask> {
-        private Map<ResourceLocation, QuestTaskData<? extends QuestTask>> subtasksData = new HashMap<>();
+    public static abstract class CompositeTaskData extends QuestTaskData<CompositeTask> {
+        protected Map<ResourceLocation, QuestTaskData<? extends QuestTask>> subtasksData = new HashMap<>();
 
         public CompositeTaskData(@NotNull CompositeTask parentTask) {
             super(parentTask);
         }
 
-        @Override
-        public float getProgression() {
-            AtomicInteger requiredSubtasks = new AtomicInteger(0);
-            AtomicInteger completedSubtasks = new AtomicInteger(0);
-            task.subtasks.forEach((subtask, required) -> {
-                if (!required) return;
-                requiredSubtasks.set(requiredSubtasks.get() + 1);
-                if (subtasksData.containsKey(subtask.getTaskId())) {
-                    QuestTaskData<? extends QuestTask> subtaskData = subtasksData.get(subtask.getTaskId());
-                    if (subtaskData.checkProgression()) completedSubtasks.set(completedSubtasks.get() + 1);
-                }
-            });
+        public Optional<QuestTaskData<? extends QuestTask>> getSubtaskData(ResourceLocation taskId) {
+            if (subtasksData.containsKey(taskId)) return Optional.ofNullable(subtasksData.getOrDefault(taskId, null));
+            return Optional.empty();
+        }
 
-            return MathUtils.clamp((float) completedSubtasks.get() / (float) requiredSubtasks.get(), 0.0f, 1.0f);
+        public void setSubtasksData(ResourceLocation taskId, QuestTaskData<? extends QuestTask> data) {
+            subtasksData.put(taskId, data);
         }
 
         @Override

@@ -1,4 +1,6 @@
-package io.github.gcjojo.questslib.quests;
+package io.github.gcjojo.questslib.quests.factory;
+
+import io.github.gcjojo.questslib.quests.QuestTask;
 
 import java.util.HashMap;
 import java.util.Map;
