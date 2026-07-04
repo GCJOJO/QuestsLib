@@ -1,10 +1,10 @@
 package io.github.gcjojo.questslib.quests.tasks;
 
 import com.google.gson.JsonObject;
+import io.github.gcjojo.liblib.utils.MathUtils;
 import io.github.gcjojo.questslib.quests.QuestTask;
 import io.github.gcjojo.questslib.quests.enums.StatTaskType;
 import io.github.gcjojo.questslib.quests.enums.TaskType;
-import io.github.gcjojo.questslib.utils.MathUtils;
 import lombok.Getter;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
@@ -44,6 +44,8 @@ public class StatTask extends QuestTask {
             this.targetId = ResourceLocation.tryParse(object.get("target").getAsString());
         if (object.has("amount"))
             this.amount = object.get("amount").getAsInt();
+
+        this.taskDataClass = StatTaskData.class;
     }
 
     @Override
@@ -70,7 +72,7 @@ public class StatTask extends QuestTask {
     }
 
     public static class StatTaskData extends QuestTaskData<StatTask> {
-        private int amount;
+        private int amount = 0;
 
         public StatTaskData(StatTask parentTask) {
             super(parentTask);
@@ -86,13 +88,16 @@ public class StatTask extends QuestTask {
         }
 
         @Override
-        public CompoundTag saveData() {
-            return null;
+        public CompoundTag serialize() {
+            CompoundTag nbt = new CompoundTag();
+            nbt.putInt("Amount", amount);
+            return nbt;
         }
 
         @Override
-        public void loadData(CompoundTag data) {
-
+        public void deserialize(CompoundTag data) {
+            if (data.contains("Amount"))
+                this.amount = data.getInt("Amount");
         }
     }
 }

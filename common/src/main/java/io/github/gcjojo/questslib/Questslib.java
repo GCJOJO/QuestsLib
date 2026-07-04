@@ -1,9 +1,13 @@
 package io.github.gcjojo.questslib;
 
 import com.mojang.logging.LogUtils;
+import io.github.gcjojo.factory.PlayerDataRegistry;
 import io.github.gcjojo.questslib.events.QuestsEvents;
+import io.github.gcjojo.questslib.quests.QuestLoader;
 import io.github.gcjojo.questslib.quests.QuestManager;
 import io.github.gcjojo.questslib.quests.factory.QuestTaskDataRegistry;
+import io.github.gcjojo.questslib.quests.tasks.AllTask;
+import io.github.gcjojo.questslib.quests.tasks.AnyTask;
 import io.github.gcjojo.questslib.quests.tasks.StatTask;
 import net.minecraft.network.chat.Component;
 import org.slf4j.Logger;
@@ -21,7 +25,12 @@ public final class Questslib {
 
     public static void init() {
         QuestManager.initEvent();
+        PlayerDataRegistry.register(QuestPlayerData.class, QuestPlayerData::new);
+
+        QuestLoader.registerDefaultTaskClasses();
         QuestTaskDataRegistry.register(StatTask.class, StatTask.StatTaskData::new);
+        QuestTaskDataRegistry.register(AnyTask.class, AnyTask.AnyTaskData::new);
+        QuestTaskDataRegistry.register(AllTask.class, AllTask.AllTaskData::new);
 
         QuestsEvents.TASK_PROGRESSION.register((player, questId, taskId) -> {
             float progression = QuestManager.getPlayerProgression(player, questId);

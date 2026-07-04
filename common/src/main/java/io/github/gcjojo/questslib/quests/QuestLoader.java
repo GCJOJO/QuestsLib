@@ -16,7 +16,7 @@ import java.util.*;
 
 public class QuestLoader {
 
-    private static Map<ResourceLocation, Class<? extends QuestTask>> questTaskClasses = new HashMap<>();
+    private static final Map<ResourceLocation, Class<? extends QuestTask>> questTaskClasses = new HashMap<>();
 
     public static void registerDefaultTaskClasses() {
         registerTaskClass(ResourceLocation.tryBuild(Questslib.MOD_ID, "stat"), StatTask.class);
@@ -36,7 +36,10 @@ public class QuestLoader {
                 JsonArray json = new Gson().fromJson(new InputStreamReader(questFile.open()), JsonArray.class);
                 json.forEach(questJson -> loadQuest(questJson.getAsJsonObject()).ifPresent(quest -> quests.put(quest.questId, quest)));
             } catch (IOException | JsonSyntaxException | JsonIOException e) {
-                Questslib.printException(String.format("Unable to parse quest file %s", questFileLocation.toString()), e);
+                if (questFileLocation != null)
+                    Questslib.printException(String.format("Unable to parse quest file %s", questFileLocation.toString()), e);
+                else
+                    Questslib.printException("Unable to parse quest file", e);
             }
         });
 
@@ -85,7 +88,6 @@ public class QuestLoader {
             Questslib.getLogger().error("Invalid Task Type {}.", taskType);
             return Optional.empty();
         }
-        ;
 
         Class<? extends QuestTask> taskClass = questTaskClasses.get(taskTypeId);
         try {

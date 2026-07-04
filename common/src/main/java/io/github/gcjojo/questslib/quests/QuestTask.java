@@ -25,10 +25,16 @@ public abstract class QuestTask {
     public QuestTask(JsonObject json) {
         if (json.has("id"))
             this.taskId = ResourceLocation.tryParse(json.get("id").getAsString());
+
         if (json.has("name"))
             this.taskName = Component.translatable(json.get("name").getAsString());
+        else
+            this.taskName = Component.empty();
+
         if (json.has("description"))
             this.taskDescription = Component.translatable(json.get("description").getAsString());
+        else
+            this.taskDescription = Component.empty();
     }
 
     public abstract TaskType getTaskType();
@@ -51,9 +57,9 @@ public abstract class QuestTask {
 
         public abstract float getProgression();
 
-        public abstract CompoundTag saveData();
+        public abstract CompoundTag serialize();
 
-        public abstract void loadData(CompoundTag data);
+        public abstract void deserialize(CompoundTag data);
     }
 
     private class EmptyQuestTaskData extends QuestTaskData<QuestTask> {
@@ -67,12 +73,12 @@ public abstract class QuestTask {
         }
 
         @Override
-        public CompoundTag saveData() {
-            return null;
+        public CompoundTag serialize() {
+            return new CompoundTag();
         }
 
         @Override
-        public void loadData(CompoundTag data) {
+        public void deserialize(CompoundTag data) {
 
         }
     }

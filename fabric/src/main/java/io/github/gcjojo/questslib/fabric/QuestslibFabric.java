@@ -1,6 +1,8 @@
 package io.github.gcjojo.questslib.fabric;
 
+import dev.architectury.event.events.common.CommandRegistrationEvent;
 import io.github.gcjojo.questslib.Questslib;
+import io.github.gcjojo.questslib.commands.QuestCommand;
 import net.fabricmc.api.ModInitializer;
 
 public final class QuestslibFabric implements ModInitializer {
@@ -12,5 +14,8 @@ public final class QuestslibFabric implements ModInitializer {
 
         // Run our common setup.
         Questslib.init();
+        CommandRegistrationEvent.EVENT.register(((dispatcher, registry, selection) -> {
+            QuestCommand.registerCommand(dispatcher);
+        }));
     }
 }

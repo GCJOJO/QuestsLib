@@ -1,17 +1,25 @@
 package io.github.gcjojo.questslib.quests.tasks;
 
+import com.google.gson.JsonObject;
+import io.github.gcjojo.liblib.utils.MathUtils;
 import io.github.gcjojo.questslib.quests.QuestTask;
 import io.github.gcjojo.questslib.quests.enums.TaskType;
-import io.github.gcjojo.questslib.utils.MathUtils;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class AnyTask extends CompositeTask {
-    public AnyTask(ResourceLocation taskId, Component taskName, Component taskDescription) {
-        super(taskId, taskName, taskDescription);
+    public AnyTask(ResourceLocation taskId, Component taskName, Component taskDescription, Map<QuestTask, Boolean> subtasks) {
+        super(taskId, taskName, taskDescription, subtasks);
+
+        this.taskDataClass = AnyTaskData.class;
+    }
+
+    public AnyTask(JsonObject json) {
+        super(json);
     }
 
     @Override
@@ -19,9 +27,8 @@ public class AnyTask extends CompositeTask {
         return null;
     }
 
-    public static class AnyTaskData extends CompositeTaskData {
-
-        public AnyTaskData(@NotNull CompositeTask parentTask) {
+    public static class AnyTaskData extends CompositeTaskData<AnyTask> {
+        public AnyTaskData(@NotNull AnyTask parentTask) {
             super(parentTask);
         }
 

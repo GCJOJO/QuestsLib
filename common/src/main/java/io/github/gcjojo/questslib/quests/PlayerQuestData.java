@@ -3,15 +3,18 @@ package io.github.gcjojo.questslib.quests;
 import io.github.gcjojo.questslib.Questslib;
 import io.github.gcjojo.questslib.quests.enums.QuestCompletionState;
 import lombok.Getter;
+import lombok.Setter;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.Optional;
 
+@Getter
 public class PlayerQuestData {
-    private @Getter ResourceLocation questId;
-    private @Getter QuestCompletionState completionState;
-    private @Getter int currentTaskId;
-    private @Getter QuestTask.QuestTaskData<? extends QuestTask> currentTaskData;
+    private final ResourceLocation questId;
+    private @Setter QuestCompletionState completionState;
+    private int currentTaskId;
+    private QuestTask.QuestTaskData<? extends QuestTask> currentTaskData;
 
     public PlayerQuestData(ResourceLocation questId) {
         this.questId = questId;
@@ -49,5 +52,13 @@ public class PlayerQuestData {
 
         if (quest == null || currentTaskId >= quest.getTaskAmount()) return Optional.empty();
         return Optional.ofNullable(quest.getTask(currentTaskId));
+    }
+
+    public CompoundTag serialize() {
+        CompoundTag nbt = new CompoundTag();
+        nbt.putString("State", completionState.getStateString());
+        nbt.putInt("CurrentTask", currentTaskId);
+        nbt.put("TaskData", currentTaskData.serialize());
+        return nbt;
     }
 }

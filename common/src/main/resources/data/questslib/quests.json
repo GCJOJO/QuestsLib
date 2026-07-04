@@ -5,13 +5,42 @@
     "description": "this is my first quest",
     "tasks": [
       {
-        "task": "stat",
+        "task": "questslib:stat",
         "id": "questslib:quest_1_collect_dirt",
         "name": "Collect 10 dirt",
         "stat_type": "item",
         "target": "minecraft:dirt",
         "amount": 10
+      },
+      {
+        "task": "questslib:all",
+        "id": "questslib:quest_1_all_test",
+        "name": "Get an Iron Pickaxe and Mine 10 Stone Blocks",
+        "subtasks": [
+          {
+            "task": "questslib:stat",
+            "id": "questslib:quest_1_collect_iron_pickaxe",
+            "name": "Get an Iron Pickaxe",
+            "stat_type": "item",
+            "target": "minecraft:iron_pickaxe",
+            "amount": 1
+          },
+          {
+            "task": "questslib:stat",
+            "id": "questslib:quest_1_mine_10_stone_blocks",
+            "name": "Mine 10 Stone Blocks",
+            "stat_type": "broken_blocks",
+            "target": "minecraft:stone",
+            "amount": 10
+          }
+        ]
       }
     ]
+  },
+  {
+    "id": "questslib:quest_2",
+    "name": "my second quest",
+    "description": "this is my second quest",
+    "tasks": []
   }
 ]

@@ -7,6 +7,8 @@ import dev.architectury.event.events.common.LifecycleEvent;
 import dev.architectury.event.events.common.PlayerEvent;
 import dev.architectury.platform.Platform;
 import dev.architectury.utils.value.IntValue;
+import io.github.gcjojo.liblib.LibLib;
+import io.github.gcjojo.questslib.QuestPlayerData;
 import io.github.gcjojo.questslib.Questslib;
 import io.github.gcjojo.questslib.events.QuestsEvents;
 import io.github.gcjojo.questslib.quests.enums.QuestCompletionState;
@@ -14,6 +16,7 @@ import io.github.gcjojo.questslib.quests.enums.StatTaskType;
 import io.github.gcjojo.questslib.quests.enums.TaskType;
 import io.github.gcjojo.questslib.quests.tasks.CompositeTask;
 import io.github.gcjojo.questslib.quests.tasks.StatTask;
+import lombok.Getter;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
@@ -32,29 +35,51 @@ import net.minecraft.world.level.block.state.BlockState;
 import java.util.*;
 
 public class QuestManager {
-
+    @Getter
     public static Map<ResourceLocation, Quest> quests = new HashMap<>();
-    public static Map<Player, PlayerQuestDataMap> playerData = new HashMap<>();
+    public static Map<Player, PlayerQuestDataMap> playersData = new HashMap<>();
+    static ResourceLocation QUEST_PLAYER_DATA_ID = ResourceLocation.tryBuild(Questslib.MOD_ID, "quest_player_data");
 
     public static PlayerQuestDataMap loadPlayerData(Player player) {
-        //if(playerData.containsKey(player))
-        //{
-        //}
-        // Load player data, if doesn't exist, create new
-        return new PlayerQuestDataMap();
+        return LibLib.getPlayerDataManager().deserializePlayerData(player, QUEST_PLAYER_DATA_ID, QuestPlayerData.class).getQuestData();
     }
 
     public static void savePlayerData(Player player) {
+        QuestPlayerData questPlayerData = new QuestPlayerData();
+        questPlayerData.setQuestData(playersData.get(player));
+        LibLib.getPlayerDataManager().serializePlayerData(player, questPlayerData, QUEST_PLAYER_DATA_ID);
+    }
 
+    public static PlayerQuestDataMap getPlayerQuests(Player player) {
+        if (!playersData.containsKey(player)) return new PlayerQuestDataMap();
+
+        return playersData.get(player);
+    }
+
+    public static PlayerQuestDataMap getPlayerQuestsByState(Player player, QuestCompletionState state) {
+        PlayerQuestDataMap quests = new PlayerQuestDataMap();
+        getPlayerQuests(player).entrySet().stream()
+                .filter(quest -> quest.getValue().getCompletionState() == state)
+                .forEach(entry -> quests.put(entry.getKey(), entry.getValue()));
+        return quests;
+    }
+
+    public static Optional<PlayerQuestData> getPlayerQuestData(Player player, ResourceLocation questId) {
+        if (!playersData.containsValue(player))
+            playersData.putIfAbsent(player, new PlayerQuestDataMap());
+
+        PlayerQuestDataMap playerData = playersData.get(player);
+        if (!playerData.containsKey(questId))
+            playerData.putIfAbsent(questId, new PlayerQuestData(questId));
+
+        return Optional.ofNullable(playerData.get(questId));
     }
 
     public static void loadQuests(MinecraftServer server) {
         List<String> namespaces = new ArrayList<>(Platform.getModIds());
         namespaces.addAll(server.getResourceManager().getNamespaces());
 
-        namespaces.forEach(namespace -> {
-            quests.putAll(QuestLoader.loadQuestFile(server, namespace));
-        });
+        namespaces.forEach(namespace -> quests.putAll(QuestLoader.loadQuestFile(server, namespace)));
         Questslib.getLogger().info("Loaded {} quest(s) !", quests.size());
     }
 
@@ -67,12 +92,12 @@ public class QuestManager {
     }
 
     public static void onPlayerJoin(ServerPlayer player) {
-        playerData.put(player, loadPlayerData(player));
+        playersData.put(player, loadPlayerData(player));
     }
 
     public static void onPlayerLeave(ServerPlayer player) {
         savePlayerData(player);
-        playerData.remove(player);
+        playersData.remove(player);
     }
 
     public static void initEvent() {
@@ -100,25 +125,25 @@ public class QuestManager {
 
         if (task.getTaskType() == TaskType.Stat) {
             StatTask statTask = (StatTask) task;
-            if (statTask.getStatType() != type || statTask.getTargetId() != targetId) return;
+            if (statTask.getStatType() != type || !statTask.getTargetId().equals(targetId)) return;
 
             if (!(questData.getCurrentTaskData() instanceof StatTask.StatTaskData statData)) return;
 
             statData.addAmount(amount);
         } else if (task.getTaskType() == TaskType.Any || task.getTaskType() == TaskType.All) {
             CompositeTask compositeTask = (CompositeTask) task;
-            if (!(questData.getCurrentTaskData() instanceof CompositeTask.CompositeTaskData compositeData)) return;
+            if (!(questData.getCurrentTaskData() instanceof CompositeTask.CompositeTaskData compositeData))
+                return;
 
             compositeTask.getSubtasks().keySet().stream().filter(
                     subtask -> subtask.getTaskType() == TaskType.Stat &&
                             subtask instanceof StatTask statSubtask &&
                             statSubtask.getStatType() == type &&
-                            statSubtask.getTargetId() == targetId).forEach(subtask -> {
-                compositeData.getSubtaskData(subtask.getTaskId()).ifPresent(subtaskData -> {
-                    if (!(subtaskData instanceof StatTask.StatTaskData subStatTaskData)) return;
-                    subStatTaskData.addAmount(amount);
-                });
-            });
+                            statSubtask.getTargetId().equals(targetId)).forEach(subtask ->
+                    compositeData.getSubtaskData(subtask.getTaskId()).ifPresent(subtaskData -> {
+                        if (!(subtaskData instanceof StatTask.StatTaskData subStatTaskData)) return;
+                        subStatTaskData.addAmount(amount);
+                    }));
         }
 
 
@@ -134,21 +159,20 @@ public class QuestManager {
     }
 
     public static void onPlayerPickupItem(Player player, ItemEntity itemEntity, ItemStack stack) {
-        if (!playerData.containsKey(player)) return;
+        if (!playersData.containsKey(player)) return;
 
-        PlayerQuestDataMap dataMap = playerData.get(player);
-        dataMap.forEach((questId, questData) -> {
-            onStatTaskUpdate(player, questData, BuiltInRegistries.ITEM.getKey(stack.getItem()), stack.getCount(), StatTaskType.Item);
-        });
+        PlayerQuestDataMap dataMap = playersData.get(player);
+        ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
+        int stackAmount = stack.getCount();
+        dataMap.forEach((questId, questData) -> onStatTaskUpdate(player, questData, itemId, stackAmount, StatTaskType.Item));
     }
 
     public static EventResult onPlayerBreakBlock(Level level, BlockPos pos, BlockState state, ServerPlayer player, IntValue xp) {
-        if (!playerData.containsKey(player)) return EventResult.pass();
+        if (!playersData.containsKey(player)) return EventResult.pass();
 
-        PlayerQuestDataMap dataMap = playerData.get(player);
-        dataMap.forEach((questId, questData) -> {
-            onStatTaskUpdate(player, questData, BuiltInRegistries.BLOCK.getKey(state.getBlock()), 1, StatTaskType.BrokenBlocks);
-        });
+        PlayerQuestDataMap dataMap = playersData.get(player);
+        ResourceLocation blockId = BuiltInRegistries.BLOCK.getKey(state.getBlock());
+        dataMap.forEach((questId, questData) -> onStatTaskUpdate(player, questData, blockId, 1, StatTaskType.BrokenBlocks));
 
         return EventResult.pass();
     }
@@ -156,12 +180,11 @@ public class QuestManager {
     public static EventResult onEntityPlaceBlock(Level level, BlockPos pos, BlockState state, Entity placer) {
         if (!(placer instanceof Player player)) return EventResult.pass();
 
-        if (!playerData.containsKey(player)) return EventResult.pass();
+        if (!playersData.containsKey(player)) return EventResult.pass();
 
-        PlayerQuestDataMap dataMap = playerData.get(player);
-        dataMap.forEach((questId, questData) -> {
-            onStatTaskUpdate(player, questData, BuiltInRegistries.BLOCK.getKey(state.getBlock()), 1, StatTaskType.PlacedBlocks);
-        });
+        PlayerQuestDataMap dataMap = playersData.get(player);
+        ResourceLocation blockId = BuiltInRegistries.BLOCK.getKey(state.getBlock());
+        dataMap.forEach((questId, questData) -> onStatTaskUpdate(player, questData, blockId, 1, StatTaskType.PlacedBlocks));
 
         return EventResult.pass();
     }
@@ -170,20 +193,19 @@ public class QuestManager {
         Entity sourceEntity = source.getEntity();
         if (!(sourceEntity instanceof Player player)) return EventResult.pass();
 
-        if (!playerData.containsKey(player)) return EventResult.pass();
+        if (!playersData.containsKey(player)) return EventResult.pass();
 
-        PlayerQuestDataMap dataMap = playerData.get(player);
-        dataMap.forEach((questId, questData) -> {
-            onStatTaskUpdate(player, questData, BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()), 1, StatTaskType.KilledMobs);
-        });
+        PlayerQuestDataMap dataMap = playersData.get(player);
+        ResourceLocation entityId = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType());
+        dataMap.forEach((questId, questData) -> onStatTaskUpdate(player, questData, entityId, 1, StatTaskType.KilledMobs));
 
         return EventResult.pass();
     }
 
     public static float getPlayerProgression(Player player, ResourceLocation questId) {
-        if (!playerData.containsKey(player)) return 0.0f;
+        if (!playersData.containsKey(player)) return 0.0f;
 
-        PlayerQuestDataMap dataMap = playerData.get(player);
+        PlayerQuestDataMap dataMap = playersData.get(player);
         if (!dataMap.containsKey(questId)) return 0.0f;
 
         PlayerQuestData questData = dataMap.get(questId);

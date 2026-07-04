@@ -17,7 +17,7 @@ public class QuestTaskDataRegistry {
     public static <T extends QuestTask> QuestTask.QuestTaskData<T> create(T task) {
         QuestTaskDataFactory<T> factory = (QuestTaskDataFactory<T>) FACTORIES.get(task.getClass());
         if (factory == null) {
-            throw new IllegalStateException("Aucune factory enregistrée pour " + task.getClass());
+            throw new IllegalStateException("No factory found for " + task.getClass());
         }
         return factory.create(task);
     }

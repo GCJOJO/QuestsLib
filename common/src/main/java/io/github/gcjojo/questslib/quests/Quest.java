@@ -7,10 +7,11 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
+@Getter
 public class Quest {
-    protected @Getter ResourceLocation questId;
-    protected @Getter Component questName;
-    protected @Getter Component questDescription;
+    protected ResourceLocation questId;
+    protected Component questName;
+    protected Component questDescription;
 
     protected List<QuestTask> tasks;
 

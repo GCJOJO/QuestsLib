@@ -18,9 +18,7 @@ public enum StatTaskType {
 
     public static StatTaskType fromId(String id) {
         for (StatTaskType type : values()) {
-            if (type.typeString.equals(id)) {
-                return type;
-            }
+            if (type.typeString.equals(id)) return type;
         }
         Questslib.getLogger().error("StatTask Type Unknow {}", id);
         return None;
