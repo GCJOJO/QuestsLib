@@ -32,6 +32,10 @@ subprojects {
         // for more information about repositories.
         mavenLocal()
         mavenCentral()
+        maven {
+            url 'https://jitpack.io'
+            content { includeGroup "com.github.GCJOJO.LibLib" }
+        }
     }
 
     dependencies {
