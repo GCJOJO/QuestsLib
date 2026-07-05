@@ -38,16 +38,16 @@ public class QuestManager {
     @Getter
     public static Map<ResourceLocation, Quest> quests = new HashMap<>();
     public static Map<Player, PlayerQuestDataMap> playersData = new HashMap<>();
-    static ResourceLocation QUEST_PLAYER_DATA_ID = ResourceLocation.tryBuild(Questslib.MOD_ID, "quest_player_data");
+    static ResourceLocation QUEST_PLAYER_SAVE_DATA = ResourceLocation.tryBuild(Questslib.MOD_ID, "quest_player_save_data");
 
     public static PlayerQuestDataMap loadPlayerData(Player player) {
-        return LibLib.getPlayerDataManager().deserializePlayerData(player, QUEST_PLAYER_DATA_ID, QuestPlayerSaveData.class).getQuestData();
+        return LibLib.getPlayerDataManager().deserializePlayerData(player, QUEST_PLAYER_SAVE_DATA, QuestPlayerSaveData.class).getQuestData();
     }
 
     public static void savePlayerData(Player player) {
         QuestPlayerSaveData questPlayerSaveData = new QuestPlayerSaveData();
         questPlayerSaveData.setQuestData(playersData.get(player));
-        LibLib.getPlayerDataManager().serializePlayerData(player, questPlayerSaveData, QUEST_PLAYER_DATA_ID);
+        LibLib.getPlayerDataManager().serializePlayerData(player, questPlayerSaveData, QUEST_PLAYER_SAVE_DATA);
     }
 
     public static PlayerQuestDataMap getPlayerQuests(Player player) {
