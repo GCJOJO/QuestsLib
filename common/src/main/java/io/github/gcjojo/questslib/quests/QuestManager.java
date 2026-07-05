@@ -254,13 +254,13 @@ public class QuestManager {
         dataMap.forEach((questId, questData) -> onLocationTaskUpdated(player, questData, biomeId, LocationTaskType.Biome));
     }
 
-    public static void onPlayerEnteredStructure(ServerPlayer player, ResourceLocation biomeId) {
-        Questslib.getLogger().info("Player {} has entered structure {}", player.getName().getString(), biomeId.toString());
+    public static void onPlayerEnteredStructure(ServerPlayer player, ResourceLocation structureId) {
+        Questslib.getLogger().info("Player {} has entered structure {}", player.getName().getString(), structureId.toString());
 
         if (!playersData.containsKey(player)) return;
 
         PlayerQuestDataMap dataMap = playersData.get(player);
-        dataMap.forEach((questId, questData) -> onLocationTaskUpdated(player, questData, biomeId, LocationTaskType.Structure));
+        dataMap.forEach((questId, questData) -> onLocationTaskUpdated(player, questData, structureId, LocationTaskType.Structure));
     }
 
     public static float getPlayerProgression(Player player, ResourceLocation questId) {

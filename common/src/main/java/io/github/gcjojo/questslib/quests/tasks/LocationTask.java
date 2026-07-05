@@ -41,9 +41,8 @@ public class LocationTask extends QuestTask {
                     locationTarget = Either.right(new LocationTask.LocationTagTarget.BiomeTarget(TagKey.create(Registries.BIOME, locationId)));
                 else if (locationTaskType == LocationTaskType.Structure)
                     locationTarget = Either.right(new LocationTask.LocationTagTarget.StructureTarget(TagKey.create(Registries.STRUCTURE, locationId)));
-            }
-
-            locationTarget = Either.left(ResourceLocation.tryParse(json.get("location").getAsString()));
+            } else
+                locationTarget = Either.left(ResourceLocation.tryParse(json.get("location").getAsString()));
         }
     }
 
