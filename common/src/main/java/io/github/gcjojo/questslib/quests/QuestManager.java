@@ -94,9 +94,15 @@ public class QuestManager {
         return Optional.ofNullable(quests.getOrDefault(questId, null));
     }
 
-    public static Optional<QuestTask> getTask(ResourceLocation questId, int taskId) {
+    public static Optional<QuestTask> getTask(ResourceLocation questId, int taskNumber) {
         Optional<Quest> quest = getQuest(questId);
-        return quest.map(value -> value.getTask(taskId));
+        return quest.map(value -> value.getTask(taskNumber));
+    }
+
+    public static Optional<QuestTask> getTask(ResourceLocation questId, ResourceLocation taskId) {
+        Optional<Quest> quest = getQuest(questId);
+        if (quest.isEmpty()) return Optional.empty();
+        return quest.get().getTask(taskId);
     }
 
     public static void onServerLevelLoad(ServerLevel serverLevel) {
@@ -133,6 +139,7 @@ public class QuestManager {
 
         if (questData.checkTaskProgression()) {
             QuestsEvents.TASK_COMPLETED.invoker().taskCompleted(player, taskId);
+            getTask(questId, taskId).ifPresent(task -> task.rewardPlayer(player));
 
             questData.nextTask();
             if (questData.getCompletionState() == QuestCompletionState.Completed)

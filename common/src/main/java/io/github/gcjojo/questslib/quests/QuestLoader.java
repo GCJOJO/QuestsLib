@@ -2,7 +2,10 @@ package io.github.gcjojo.questslib.quests;
 
 import com.google.gson.*;
 import io.github.gcjojo.questslib.Questslib;
+import io.github.gcjojo.questslib.quests.factory.QuestRewardFactory;
 import io.github.gcjojo.questslib.quests.factory.QuestTaskDataRegistry;
+import io.github.gcjojo.questslib.quests.rewards.ItemReward;
+import io.github.gcjojo.questslib.quests.rewards.QuestReward;
 import io.github.gcjojo.questslib.quests.tasks.AllTask;
 import io.github.gcjojo.questslib.quests.tasks.AnyTask;
 import io.github.gcjojo.questslib.quests.tasks.LocationTask;
@@ -19,6 +22,7 @@ import java.util.*;
 public class QuestLoader {
 
     private static final Map<ResourceLocation, Class<? extends QuestTask>> questTaskClasses = new HashMap<>();
+    private static final Map<ResourceLocation, QuestRewardFactory<? extends QuestReward>> questRewardFactories = new HashMap<>();
 
     public static void registerDefaultTaskClasses() {
         registerTaskClass(ResourceLocation.tryBuild(Questslib.MOD_ID, "stat"), StatTask.class);
@@ -32,8 +36,16 @@ public class QuestLoader {
         QuestTaskDataRegistry.register(AllTask.class, AllTask.AllTaskData::new);
     }
 
+    public static void registerDefaultRewards() {
+        registerReward(ResourceLocation.tryBuild(Questslib.MOD_ID, "item"), ItemReward::new);
+    }
+
     public static <T extends QuestTask> void registerTaskClass(ResourceLocation taskName, Class<? extends QuestTask> taskClass) {
         questTaskClasses.putIfAbsent(taskName, taskClass);
+    }
+
+    public static <T extends QuestReward> void registerReward(ResourceLocation rewardId, QuestRewardFactory<? extends QuestReward> factory) {
+        questRewardFactories.putIfAbsent(rewardId, factory);
     }
 
     public static Map<ResourceLocation, Quest> loadQuestFile(MinecraftServer server, String namespace) {
@@ -81,7 +93,18 @@ public class QuestLoader {
             });
         }
 
-        return Optional.of(new Quest(questId, questName, questDescription, tasks));
+        List<QuestReward> rewards = new ArrayList<>();
+
+        if (json.has("rewards")) {
+            json.get("rewards").getAsJsonArray().forEach(rewardJson -> {
+                String rewardIdString = rewardJson.getAsString();
+                ResourceLocation rewardId = ResourceLocation.tryParse(rewardIdString);
+                JsonObject rewardData = rewardJson.getAsJsonObject();
+                constructReward(rewardId, rewardData).ifPresent(rewards::add);
+            });
+        }
+
+        return Optional.of(new Quest(questId, questName, questDescription, tasks, rewards));
     }
 
     public static Optional<QuestTask> constructTask(JsonObject json) {
@@ -105,5 +128,10 @@ public class QuestLoader {
             Questslib.printException(String.format("Unable to create task %s.", taskType), e);
             return Optional.empty();
         }
+    }
+
+    public static Optional<QuestReward> constructReward(ResourceLocation rewardId, JsonObject json) {
+        if (!questRewardFactories.containsKey(rewardId)) return Optional.empty();
+        return Optional.ofNullable(questRewardFactories.get(rewardId).create(json));
     }
 }

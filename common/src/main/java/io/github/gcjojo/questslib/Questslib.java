@@ -24,6 +24,7 @@ public final class Questslib {
         PlayerDataRegistry.register(QuestPlayerSaveData.class, QuestPlayerSaveData::new);
 
         QuestLoader.registerDefaultTaskClasses();
+        QuestLoader.registerDefaultRewards();
 
         QuestsEvents.TASK_PROGRESSION.register((player, questId, taskId) -> {
             float progression = QuestManager.getPlayerProgression(player, questId);

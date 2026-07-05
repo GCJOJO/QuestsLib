@@ -3,18 +3,25 @@ package io.github.gcjojo.questslib.quests;
 import com.google.gson.JsonObject;
 import io.github.gcjojo.questslib.quests.enums.TaskType;
 import io.github.gcjojo.questslib.quests.factory.QuestTaskDataRegistry;
+import io.github.gcjojo.questslib.quests.rewards.QuestReward;
 import lombok.Getter;
 import lombok.NonNull;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.player.Player;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.ArrayList;
+import java.util.List;
+
+@Getter
 public abstract class QuestTask {
-    protected @Getter ResourceLocation taskId;
-    protected @Getter Component taskName;
-    protected @Getter Component taskDescription;
-    protected @Getter Class<? extends QuestTaskData<? extends QuestTask>> taskDataClass = EmptyQuestTaskData.class;
+    protected ResourceLocation taskId;
+    protected Component taskName;
+    protected Component taskDescription;
+    protected List<QuestReward> rewards = new ArrayList<>();
+    protected Class<? extends QuestTaskData<? extends QuestTask>> taskDataClass = EmptyQuestTaskData.class;
 
     public QuestTask(ResourceLocation taskId, Component taskName, Component taskDescription) {
         this.taskId = taskId;
@@ -35,6 +42,15 @@ public abstract class QuestTask {
             this.taskDescription = Component.translatable(json.get("description").getAsString());
         else
             this.taskDescription = Component.empty();
+
+        if (json.has("rewards")) {
+            json.get("rewards").getAsJsonArray().forEach(rewardJson -> {
+                String rewardIdString = rewardJson.getAsString();
+                ResourceLocation rewardId = ResourceLocation.tryParse(rewardIdString);
+                JsonObject rewardData = rewardJson.getAsJsonObject();
+                QuestLoader.constructReward(rewardId, rewardData).ifPresent(rewards::add);
+            });
+        }
     }
 
     public abstract TaskType getTaskType();
@@ -42,6 +58,8 @@ public abstract class QuestTask {
     public QuestTaskData<? extends QuestTask> getNewTaskData() {
         return QuestTaskDataRegistry.create(this);
     }
+
+    public abstract void rewardPlayer(Player player);
 
     public static abstract class QuestTaskData<T extends QuestTask> {
         @NonNull
