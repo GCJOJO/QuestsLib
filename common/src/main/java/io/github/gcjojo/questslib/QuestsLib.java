@@ -10,13 +10,13 @@ import org.slf4j.Logger;
 
 import java.util.Arrays;
 
-public final class Questslib {
+public final class QuestsLib {
     public static final String MOD_ID = "questslib";
     private static final Logger LOGGER = LogUtils.getLogger();
 
     public static void printException(String message, Throwable e) {
-        Questslib.getLogger().error("{}\nError : {}", message, e.toString());
-        Arrays.stream(e.getStackTrace()).forEach(stackTraceElement -> Questslib.getLogger().error(stackTraceElement.toString()));
+        QuestsLib.getLogger().error("{}\nError : {}", message, e.toString());
+        Arrays.stream(e.getStackTrace()).forEach(stackTraceElement -> QuestsLib.getLogger().error(stackTraceElement.toString()));
     }
 
     public static void init() {

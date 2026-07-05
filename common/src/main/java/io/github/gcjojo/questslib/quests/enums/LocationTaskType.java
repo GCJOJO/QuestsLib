@@ -1,6 +1,6 @@
 package io.github.gcjojo.questslib.quests.enums;
 
-import io.github.gcjojo.questslib.Questslib;
+import io.github.gcjojo.questslib.QuestsLib;
 import lombok.Getter;
 
 public enum LocationTaskType {
@@ -18,7 +18,7 @@ public enum LocationTaskType {
         for (LocationTaskType type : values()) {
             if (type.typeString.equals(id)) return type;
         }
-        Questslib.getLogger().error("Location Task Type Unknow {}", id);
+        QuestsLib.getLogger().error("Location Task Type Unknow {}", id);
         return None;
     }
 

@@ -45,9 +45,11 @@ public abstract class QuestTask {
 
         if (json.has("rewards")) {
             json.get("rewards").getAsJsonArray().forEach(rewardJson -> {
-                String rewardIdString = rewardJson.getAsString();
-                ResourceLocation rewardId = ResourceLocation.tryParse(rewardIdString);
                 JsonObject rewardData = rewardJson.getAsJsonObject();
+                if (!rewardData.has("reward")) return;
+
+                String rewardIdString = rewardData.get("reward").getAsString();
+                ResourceLocation rewardId = ResourceLocation.tryParse(rewardIdString);
                 QuestLoader.constructReward(rewardId, rewardData).ifPresent(rewards::add);
             });
         }
@@ -59,7 +61,9 @@ public abstract class QuestTask {
         return QuestTaskDataRegistry.create(this);
     }
 
-    public abstract void rewardPlayer(Player player);
+    public void rewardPlayer(Player player) {
+        rewards.forEach(reward -> reward.rewardPlayer(player));
+    }
 
     public static abstract class QuestTaskData<T extends QuestTask> {
         @NonNull

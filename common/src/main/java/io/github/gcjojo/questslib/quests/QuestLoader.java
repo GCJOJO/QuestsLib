@@ -1,7 +1,7 @@
 package io.github.gcjojo.questslib.quests;
 
 import com.google.gson.*;
-import io.github.gcjojo.questslib.Questslib;
+import io.github.gcjojo.questslib.QuestsLib;
 import io.github.gcjojo.questslib.quests.factory.QuestRewardFactory;
 import io.github.gcjojo.questslib.quests.factory.QuestTaskDataRegistry;
 import io.github.gcjojo.questslib.quests.rewards.ItemReward;
@@ -25,10 +25,10 @@ public class QuestLoader {
     private static final Map<ResourceLocation, QuestRewardFactory<? extends QuestReward>> questRewardFactories = new HashMap<>();
 
     public static void registerDefaultTaskClasses() {
-        registerTaskClass(ResourceLocation.tryBuild(Questslib.MOD_ID, "stat"), StatTask.class);
-        registerTaskClass(ResourceLocation.tryBuild(Questslib.MOD_ID, "location"), LocationTask.class);
-        registerTaskClass(ResourceLocation.tryBuild(Questslib.MOD_ID, "any"), AnyTask.class);
-        registerTaskClass(ResourceLocation.tryBuild(Questslib.MOD_ID, "all"), AllTask.class);
+        registerTaskClass(ResourceLocation.tryBuild(QuestsLib.MOD_ID, "stat"), StatTask.class);
+        registerTaskClass(ResourceLocation.tryBuild(QuestsLib.MOD_ID, "location"), LocationTask.class);
+        registerTaskClass(ResourceLocation.tryBuild(QuestsLib.MOD_ID, "any"), AnyTask.class);
+        registerTaskClass(ResourceLocation.tryBuild(QuestsLib.MOD_ID, "all"), AllTask.class);
 
         QuestTaskDataRegistry.register(StatTask.class, StatTask.StatTaskData::new);
         QuestTaskDataRegistry.register(LocationTask.class, LocationTask.LocationTaskData::new);
@@ -37,7 +37,7 @@ public class QuestLoader {
     }
 
     public static void registerDefaultRewards() {
-        registerReward(ResourceLocation.tryBuild(Questslib.MOD_ID, "item"), ItemReward::new);
+        registerReward(ResourceLocation.tryBuild(QuestsLib.MOD_ID, "item"), ItemReward::new);
     }
 
     public static <T extends QuestTask> void registerTaskClass(ResourceLocation taskName, Class<? extends QuestTask> taskClass) {
@@ -57,9 +57,9 @@ public class QuestLoader {
                 json.forEach(questJson -> loadQuest(questJson.getAsJsonObject()).ifPresent(quest -> quests.put(quest.questId, quest)));
             } catch (IOException | JsonSyntaxException | JsonIOException e) {
                 if (questFileLocation != null)
-                    Questslib.printException(String.format("Unable to parse quest file %s", questFileLocation.toString()), e);
+                    QuestsLib.printException(String.format("Unable to parse quest file %s", questFileLocation.toString()), e);
                 else
-                    Questslib.printException("Unable to parse quest file", e);
+                    QuestsLib.printException("Unable to parse quest file", e);
             }
         });
 
@@ -69,7 +69,7 @@ public class QuestLoader {
     public static Optional<Quest> loadQuest(JsonObject json) {
         ResourceLocation questId;
         if (!json.has("id") || (questId = ResourceLocation.tryParse(json.get("id").getAsString())) == null) {
-            Questslib.getLogger().error("No id provided for quest !");
+            QuestsLib.getLogger().error("No id provided for quest !");
             return Optional.empty();
         }
         Component questName;
@@ -97,9 +97,11 @@ public class QuestLoader {
 
         if (json.has("rewards")) {
             json.get("rewards").getAsJsonArray().forEach(rewardJson -> {
-                String rewardIdString = rewardJson.getAsString();
-                ResourceLocation rewardId = ResourceLocation.tryParse(rewardIdString);
                 JsonObject rewardData = rewardJson.getAsJsonObject();
+                if (!rewardData.has("reward")) return;
+
+                String rewardIdString = rewardData.get("reward").getAsString();
+                ResourceLocation rewardId = ResourceLocation.tryParse(rewardIdString);
                 constructReward(rewardId, rewardData).ifPresent(rewards::add);
             });
         }
@@ -110,13 +112,13 @@ public class QuestLoader {
     public static Optional<QuestTask> constructTask(JsonObject json) {
         String taskType;
         if (!json.has("task") || (taskType = json.get("task").getAsString()) == null) {
-            Questslib.getLogger().error("No Task Type provided.");
+            QuestsLib.getLogger().error("No Task Type provided.");
             return Optional.empty();
         }
 
         ResourceLocation taskTypeId = ResourceLocation.tryParse(taskType);
         if (!questTaskClasses.containsKey(taskTypeId)) {
-            Questslib.getLogger().error("Invalid Task Type {}.", taskType);
+            QuestsLib.getLogger().error("Invalid Task Type {}.", taskType);
             return Optional.empty();
         }
 
@@ -125,7 +127,7 @@ public class QuestLoader {
             return Optional.of(taskClass.getConstructor(JsonObject.class).newInstance(json));
         } catch (InstantiationException | IllegalAccessException | NoSuchMethodException |
                  InvocationTargetException e) {
-            Questslib.printException(String.format("Unable to create task %s.", taskType), e);
+            QuestsLib.printException(String.format("Unable to create task %s.", taskType), e);
             return Optional.empty();
         }
     }

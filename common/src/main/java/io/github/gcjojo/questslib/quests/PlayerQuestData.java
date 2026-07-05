@@ -1,6 +1,6 @@
 package io.github.gcjojo.questslib.quests;
 
-import io.github.gcjojo.questslib.Questslib;
+import io.github.gcjojo.questslib.QuestsLib;
 import io.github.gcjojo.questslib.quests.enums.QuestCompletionState;
 import lombok.Getter;
 import lombok.Setter;
@@ -24,7 +24,7 @@ public class PlayerQuestData {
         QuestTask task;
         if (quest != null && (task = quest.getTask(currentTaskId)) != null)
             currentTaskData = task.getNewTaskData();
-        Questslib.getLogger().warn("Feur !");
+        QuestsLib.getLogger().warn("Feur !");
     }
 
     public static PlayerQuestData deserialize(ResourceLocation questId, CompoundTag nbt) {

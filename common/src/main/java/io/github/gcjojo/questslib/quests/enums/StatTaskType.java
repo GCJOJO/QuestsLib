@@ -1,6 +1,6 @@
 package io.github.gcjojo.questslib.quests.enums;
 
-import io.github.gcjojo.questslib.Questslib;
+import io.github.gcjojo.questslib.QuestsLib;
 import lombok.Getter;
 
 public enum StatTaskType {
@@ -20,7 +20,7 @@ public enum StatTaskType {
         for (StatTaskType type : values()) {
             if (type.typeString.equals(id)) return type;
         }
-        Questslib.getLogger().error("StatTask Type Unknow {}", id);
+        QuestsLib.getLogger().error("StatTask Type Unknow {}", id);
         return None;
     }
 }

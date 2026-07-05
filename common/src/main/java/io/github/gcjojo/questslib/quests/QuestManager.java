@@ -10,7 +10,7 @@ import dev.architectury.utils.value.IntValue;
 import io.github.gcjojo.liblib.LibLib;
 import io.github.gcjojo.liblib.events.LibLibEvents;
 import io.github.gcjojo.questslib.QuestPlayerSaveData;
-import io.github.gcjojo.questslib.Questslib;
+import io.github.gcjojo.questslib.QuestsLib;
 import io.github.gcjojo.questslib.events.QuestsEvents;
 import io.github.gcjojo.questslib.quests.enums.LocationTaskType;
 import io.github.gcjojo.questslib.quests.enums.QuestCompletionState;
@@ -41,7 +41,7 @@ public class QuestManager {
     @Getter
     public static Map<ResourceLocation, Quest> quests = new HashMap<>();
     public static Map<Player, PlayerQuestDataMap> playersData = new HashMap<>();
-    static ResourceLocation QUEST_PLAYER_SAVE_DATA = ResourceLocation.tryBuild(Questslib.MOD_ID, "quest_player_save_data");
+    static ResourceLocation QUEST_PLAYER_SAVE_DATA = ResourceLocation.tryBuild(QuestsLib.MOD_ID, "quest_player_save_data");
 
     public static PlayerQuestDataMap loadPlayerData(Player player) {
         return LibLib.getPlayerDataManager().deserializePlayerData(player, QUEST_PLAYER_SAVE_DATA, QuestPlayerSaveData.class).getQuestData();
@@ -87,7 +87,7 @@ public class QuestManager {
         namespaces.addAll(server.getResourceManager().getNamespaces());
 
         namespaces.forEach(namespace -> quests.putAll(QuestLoader.loadQuestFile(server, namespace)));
-        Questslib.getLogger().info("Loaded {} quest(s) !", quests.size());
+        QuestsLib.getLogger().info("Loaded {} quest(s) !", quests.size());
     }
 
     public static Optional<Quest> getQuest(ResourceLocation questId) {
@@ -177,6 +177,8 @@ public class QuestManager {
                     compositeData.getSubtaskData(subtask.getTaskId()).ifPresent(subtaskData -> {
                         if (!(subtaskData instanceof StatTask.StatTaskData subStatTaskData)) return;
                         subStatTaskData.addAmount(amount);
+                        if (subStatTaskData.checkProgression())
+                            subtask.rewardPlayer(player);
                     }));
         }
 
@@ -193,12 +195,28 @@ public class QuestManager {
         QuestTask task = questData.getCurrentTask().orElse(null);
         if (task == null) return;
 
+        ServerLevel level = (ServerLevel) player.level();
         if (task.getTaskType() == TaskType.Location) {
             LocationTask locationTask = (LocationTask) task;
-            ServerLevel level = (ServerLevel) player.level();
             if (locationTask.getLocationTaskType() != type || !locationTask.locationMatch(level, locationId)) return;
             if (!(questData.getCurrentTaskData() instanceof LocationTask.LocationTaskData locationData)) return;
             locationData.setHasVisitedLocation(true);
+        } else if (task.getTaskType() == TaskType.Any || task.getTaskType() == TaskType.All) {
+            CompositeTask compositeTask = (CompositeTask) task;
+            if (!(questData.getCurrentTaskData() instanceof CompositeTask.CompositeTaskData<? extends CompositeTask> compositeData))
+                return;
+
+            compositeTask.getSubtasks().keySet().stream().filter(
+                    subtask -> subtask.getTaskType() == TaskType.Location &&
+                            subtask instanceof LocationTask locationTask &&
+                            locationTask.getLocationTaskType() == type &&
+                            locationTask.locationMatch(level, locationId)).forEach(subtask ->
+                    compositeData.getSubtaskData(subtask.getTaskId()).ifPresent(subtaskData -> {
+                        if (!(subtaskData instanceof LocationTask.LocationTaskData locationTaskData)) return;
+                        locationTaskData.setHasVisitedLocation(true);
+                        if (locationTaskData.checkProgression())
+                            subtask.rewardPlayer(player);
+                    }));
         }
 
         onTaskUpdate(player, questId, task.getTaskId(), questData);
@@ -206,6 +224,7 @@ public class QuestManager {
 
     // @TODO Implement this to check for Item type tasks
     public static void onPlayerInventoryChanged() {
+
     }
 
     public static void onPlayerPickupItem(Player player, ItemEntity itemEntity, ItemStack stack) {
@@ -253,7 +272,7 @@ public class QuestManager {
     }
 
     public static void onPlayerEnteredBiome(ServerPlayer player, ResourceLocation biomeId) {
-        Questslib.getLogger().info("Player {} has entered biome {}", player.getName().getString(), biomeId.toString());
+        QuestsLib.getLogger().info("Player {} has entered biome {}", player.getName().getString(), biomeId.toString());
 
         if (!playersData.containsKey(player)) return;
 
@@ -262,7 +281,7 @@ public class QuestManager {
     }
 
     public static void onPlayerEnteredStructure(ServerPlayer player, ResourceLocation structureId) {
-        Questslib.getLogger().info("Player {} has entered structure {}", player.getName().getString(), structureId.toString());
+        QuestsLib.getLogger().info("Player {} has entered structure {}", player.getName().getString(), structureId.toString());
 
         if (!playersData.containsKey(player)) return;
 

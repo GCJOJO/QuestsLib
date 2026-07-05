@@ -1,6 +1,6 @@
 package io.github.gcjojo.questslib.quests.enums;
 
-import io.github.gcjojo.questslib.Questslib;
+import io.github.gcjojo.questslib.QuestsLib;
 import lombok.Getter;
 
 public enum QuestCompletionState {
@@ -18,7 +18,7 @@ public enum QuestCompletionState {
         for (QuestCompletionState state : values()) {
             if (state.stateString.equals(id)) return state;
         }
-        Questslib.getLogger().error("StatTask Type Unknow {}", id);
+        QuestsLib.getLogger().error("StatTask Type Unknow {}", id);
         return None;
     }
 }
