@@ -18,7 +18,7 @@ public class PlayerQuestData {
 
     public PlayerQuestData(ResourceLocation questId) {
         this.questId = questId;
-        this.completionState = QuestCompletionState.Started;
+        this.completionState = QuestCompletionState.None;
         this.currentTaskId = 0;
         Quest quest = QuestManager.getQuest(this.questId).orElse(null);
         QuestTask task;

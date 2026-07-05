@@ -59,7 +59,7 @@ public abstract class QuestTask {
 
         public abstract CompoundTag serialize();
 
-        public abstract void deserialize(CompoundTag data);
+        public abstract void deserialize(CompoundTag nbt);
     }
 
     private class EmptyQuestTaskData extends QuestTaskData<QuestTask> {
@@ -78,7 +78,7 @@ public abstract class QuestTask {
         }
 
         @Override
-        public void deserialize(CompoundTag data) {
+        public void deserialize(CompoundTag nbt) {
 
         }
     }

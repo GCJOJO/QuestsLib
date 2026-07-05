@@ -41,6 +41,21 @@
     "id": "questslib:quest_2",
     "name": "my second quest",
     "description": "this is my second quest",
-    "tasks": []
+    "tasks": [
+      {
+        "task": "questslib:location",
+        "id": "questslib:quest_2_jungle",
+        "name": "Go to a jungle",
+        "location_type": "biome",
+        "location": "minecraft:jungle"
+      },
+      {
+        "task": "questslib:location",
+        "id": "questslib:quest_2_village",
+        "name": "Go to a village",
+        "location_type": "structure",
+        "location": "#minecraft:village"
+      }
+    ]
   }
 ]

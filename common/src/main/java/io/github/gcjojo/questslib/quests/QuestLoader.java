@@ -2,8 +2,10 @@ package io.github.gcjojo.questslib.quests;
 
 import com.google.gson.*;
 import io.github.gcjojo.questslib.Questslib;
+import io.github.gcjojo.questslib.quests.factory.QuestTaskDataRegistry;
 import io.github.gcjojo.questslib.quests.tasks.AllTask;
 import io.github.gcjojo.questslib.quests.tasks.AnyTask;
+import io.github.gcjojo.questslib.quests.tasks.LocationTask;
 import io.github.gcjojo.questslib.quests.tasks.StatTask;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -20,11 +22,17 @@ public class QuestLoader {
 
     public static void registerDefaultTaskClasses() {
         registerTaskClass(ResourceLocation.tryBuild(Questslib.MOD_ID, "stat"), StatTask.class);
+        registerTaskClass(ResourceLocation.tryBuild(Questslib.MOD_ID, "location"), LocationTask.class);
         registerTaskClass(ResourceLocation.tryBuild(Questslib.MOD_ID, "any"), AnyTask.class);
         registerTaskClass(ResourceLocation.tryBuild(Questslib.MOD_ID, "all"), AllTask.class);
+
+        QuestTaskDataRegistry.register(StatTask.class, StatTask.StatTaskData::new);
+        QuestTaskDataRegistry.register(LocationTask.class, LocationTask.LocationTaskData::new);
+        QuestTaskDataRegistry.register(AnyTask.class, AnyTask.AnyTaskData::new);
+        QuestTaskDataRegistry.register(AllTask.class, AllTask.AllTaskData::new);
     }
 
-    public static void registerTaskClass(ResourceLocation taskName, Class<? extends QuestTask> taskClass) {
+    public static <T extends QuestTask> void registerTaskClass(ResourceLocation taskName, Class<? extends QuestTask> taskClass) {
         questTaskClasses.putIfAbsent(taskName, taskClass);
     }
 

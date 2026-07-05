@@ -8,6 +8,7 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
+import io.github.gcjojo.questslib.quests.PlayerQuestData;
 import io.github.gcjojo.questslib.quests.QuestManager;
 import io.github.gcjojo.questslib.quests.QuestTask;
 import io.github.gcjojo.questslib.quests.enums.QuestCompletionState;
@@ -19,6 +20,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 public class QuestCommand {
@@ -50,36 +52,31 @@ public class QuestCommand {
 
     public static int listQuests(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         ServerPlayer player = context.getSource().getPlayerOrException();
-        QuestManager.PlayerQuestDataMap startedQuests = QuestManager.getPlayerQuestsByState(player, QuestCompletionState.Started);
-        QuestManager.PlayerQuestDataMap completedQuests = QuestManager.getPlayerQuestsByState(player, QuestCompletionState.Completed);
+        QuestManager.PlayerQuestDataMap quests = QuestManager.getPlayerQuestsByState(player, QuestCompletionState.Started);
+        quests.putAll(QuestManager.getPlayerQuestsByState(player, QuestCompletionState.Completed));
 
-        startedQuests.forEach((questId, playerQuestData) -> {
-            QuestManager.getQuest(questId).ifPresent(quest -> {
-                player.sendSystemMessage(Component.literal(quest.getQuestName().getString()).withStyle(ChatFormatting.GOLD));
-                int currentTaskNumber = playerQuestData.getCurrentTaskId();
-                for (int taskNumber = 0; taskNumber <= quest.getTaskAmount(); taskNumber++) {
-                    QuestTask task = quest.getTask(taskNumber);
-                    ChatFormatting messageColor = ChatFormatting.GREEN;
-                    if (taskNumber == currentTaskNumber)
-                        messageColor = ChatFormatting.GOLD;
-                    else if (taskNumber > currentTaskNumber)
-                        messageColor = ChatFormatting.DARK_GRAY;
-                    if (task != null && task.getTaskName() != null)
-                        player.sendSystemMessage(Component.literal(String.format("    %s", task.getTaskName().getString())).withStyle(messageColor));
-                }
-            });
+        quests.forEach((questId, playerQuestData) -> {
+            sendPlayerQuestInformation(player, questId, playerQuestData);
         });
 
-        completedQuests.forEach((questId, playerQuestData) -> {
-            QuestManager.getQuest(questId).ifPresent(quest -> {
-                player.sendSystemMessage(Component.literal(quest.getQuestName().getString()).withStyle(ChatFormatting.GREEN));
-            });
-        });
         return Command.SINGLE_SUCCESS;
     }
 
-    public static int seeQuestProgression(CommandContext<CommandSourceStack> context) {
-        return Command.SINGLE_SUCCESS;
+    public static int seeQuestProgression(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        ResourceLocation questId = ResourceLocationArgument.getId(context, "quest");
+        Optional<PlayerQuestData> playerQuestDataOpt = QuestManager.getPlayerQuestData(player, questId);
+        if (playerQuestDataOpt.isPresent()) {
+            sendPlayerQuestInformation(player, questId, playerQuestDataOpt.get());
+            return Command.SINGLE_SUCCESS;
+        }
+
+        if (QuestManager.getQuest(questId).isEmpty())
+            player.sendSystemMessage(Component.literal(String.format("Cannot find quest %s", questId)).withStyle(ChatFormatting.RED));
+        else
+            player.sendSystemMessage(Component.literal(String.format("You have not started quest %s", questId)).withStyle(ChatFormatting.RED));
+
+        return 0;
     }
 
     public static int setQuestState(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
@@ -88,5 +85,30 @@ public class QuestCommand {
         QuestCompletionState newState = QuestCompletionState.fromId(StringArgumentType.getString(context, "state"));
         QuestManager.getPlayerQuestData(player, questId).ifPresent(quest -> quest.setCompletionState(newState));
         return Command.SINGLE_SUCCESS;
+    }
+
+    public static void sendPlayerQuestInformation(ServerPlayer player, ResourceLocation questId, PlayerQuestData playerQuestData) {
+        QuestManager.getQuest(questId).ifPresent(quest -> {
+            ChatFormatting questColor = ChatFormatting.GOLD;
+            if (playerQuestData.getCompletionState() == QuestCompletionState.Completed)
+                questColor = ChatFormatting.GREEN;
+
+            player.sendSystemMessage(Component.literal(quest.getQuestName().getString()).withStyle(questColor));
+            int currentTaskNumber = playerQuestData.getCurrentTaskId();
+            for (int taskNumber = 0; taskNumber <= quest.getTaskAmount(); taskNumber++) {
+                QuestTask task = quest.getTask(taskNumber);
+                ChatFormatting messageColor = ChatFormatting.GREEN;
+                char frontCharacter = '✓';
+                if (taskNumber == currentTaskNumber) {
+                    messageColor = ChatFormatting.GOLD;
+                    frontCharacter = '>';
+                } else if (taskNumber > currentTaskNumber) {
+                    messageColor = ChatFormatting.DARK_GRAY;
+                    frontCharacter = '✕';
+                }
+                if (task != null && task.getTaskName() != null)
+                    player.sendSystemMessage(Component.literal(String.format("%s   %s", frontCharacter, task.getTaskName().getString())).withStyle(messageColor));
+            }
+        });
     }
 }

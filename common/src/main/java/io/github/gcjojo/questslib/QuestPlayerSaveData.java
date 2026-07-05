@@ -1,6 +1,6 @@
 package io.github.gcjojo.questslib;
 
-import io.github.gcjojo.liblib.utils.PlayerData;
+import io.github.gcjojo.liblib.utils.PlayerSaveData;
 import io.github.gcjojo.questslib.quests.PlayerQuestData;
 import io.github.gcjojo.questslib.quests.QuestManager;
 import lombok.Getter;
@@ -10,7 +10,7 @@ import net.minecraft.resources.ResourceLocation;
 
 @Getter
 @Setter
-public class QuestPlayerSaveData extends PlayerData {
+public class QuestPlayerSaveData extends PlayerSaveData {
     QuestManager.PlayerQuestDataMap questData = new QuestManager.PlayerQuestDataMap();
 
     @Override

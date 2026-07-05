@@ -93,10 +93,10 @@ public abstract class CompositeTask extends QuestTask {
         }
 
         @Override
-        public void deserialize(CompoundTag data) {
-            data.getAllKeys().forEach(subtaskIdString -> {
+        public void deserialize(CompoundTag nbt) {
+            nbt.getAllKeys().forEach(subtaskIdString -> {
                 ResourceLocation subtaskId = ResourceLocation.tryParse(subtaskIdString);
-                CompoundTag subtaskNbt = data.getCompound(subtaskIdString);
+                CompoundTag subtaskNbt = nbt.getCompound(subtaskIdString);
                 task.getSubtask(subtaskId).getKey().ifPresent(subtask -> {
                     QuestTaskData<? extends QuestTask> subtaskData = subtask.getNewTaskData();
                     subtaskData.deserialize(subtaskNbt);

@@ -95,9 +95,9 @@ public class StatTask extends QuestTask {
         }
 
         @Override
-        public void deserialize(CompoundTag data) {
-            if (data.contains("Amount"))
-                this.amount = data.getInt("Amount");
+        public void deserialize(CompoundTag nbt) {
+            if (nbt.contains("Amount"))
+                this.amount = nbt.getInt("Amount");
         }
     }
 }

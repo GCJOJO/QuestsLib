@@ -8,13 +8,16 @@ import dev.architectury.event.events.common.PlayerEvent;
 import dev.architectury.platform.Platform;
 import dev.architectury.utils.value.IntValue;
 import io.github.gcjojo.liblib.LibLib;
+import io.github.gcjojo.liblib.events.LibLibEvents;
 import io.github.gcjojo.questslib.QuestPlayerSaveData;
 import io.github.gcjojo.questslib.Questslib;
 import io.github.gcjojo.questslib.events.QuestsEvents;
+import io.github.gcjojo.questslib.quests.enums.LocationTaskType;
 import io.github.gcjojo.questslib.quests.enums.QuestCompletionState;
 import io.github.gcjojo.questslib.quests.enums.StatTaskType;
 import io.github.gcjojo.questslib.quests.enums.TaskType;
 import io.github.gcjojo.questslib.quests.tasks.CompositeTask;
+import io.github.gcjojo.questslib.quests.tasks.LocationTask;
 import io.github.gcjojo.questslib.quests.tasks.StatTask;
 import lombok.Getter;
 import net.minecraft.core.BlockPos;
@@ -75,6 +78,10 @@ public class QuestManager {
         return Optional.ofNullable(playerData.get(questId));
     }
 
+    public static void startQuest(Player player, ResourceLocation questId) {
+        getPlayerQuestData(player, questId).ifPresent(playerQuestData -> playerQuestData.setCompletionState(QuestCompletionState.Started));
+    }
+
     public static void loadQuests(MinecraftServer server) {
         List<String> namespaces = new ArrayList<>(Platform.getModIds());
         namespaces.addAll(server.getResourceManager().getNamespaces());
@@ -87,6 +94,11 @@ public class QuestManager {
         return Optional.ofNullable(quests.getOrDefault(questId, null));
     }
 
+    public static Optional<QuestTask> getTask(ResourceLocation questId, int taskId) {
+        Optional<Quest> quest = getQuest(questId);
+        return quest.map(value -> value.getTask(taskId));
+    }
+
     public static void onServerLevelLoad(ServerLevel serverLevel) {
         loadQuests(serverLevel.getServer());
     }
@@ -96,6 +108,7 @@ public class QuestManager {
     }
 
     public static void onPlayerLeave(ServerPlayer player) {
+        savePlayerData(player);
         playersData.remove(player);
     }
 
@@ -110,6 +123,21 @@ public class QuestManager {
         BlockEvent.PLACE.register(QuestManager::onEntityPlaceBlock);
 
         EntityEvent.LIVING_DEATH.register(QuestManager::onEntityDie);
+
+        LibLibEvents.PLAYER_ENTERED_BIOME.register(QuestManager::onPlayerEnteredBiome);
+        LibLibEvents.PLAYER_ENTERED_STRUCTURE.register(QuestManager::onPlayerEnteredStructure);
+    }
+
+    public static void onTaskUpdate(Player player, ResourceLocation questId, ResourceLocation taskId, PlayerQuestData questData) {
+        QuestsEvents.TASK_PROGRESSION.invoker().taskProgression(player, questId, taskId);
+
+        if (questData.checkTaskProgression()) {
+            QuestsEvents.TASK_COMPLETED.invoker().taskCompleted(player, taskId);
+
+            questData.nextTask();
+            if (questData.getCompletionState() == QuestCompletionState.Completed)
+                QuestsEvents.QUEST_COMPLETED.invoker().questCompleted(player, questId);
+        }
     }
 
     public static void onStatTaskUpdate(Player player, PlayerQuestData questData, ResourceLocation targetId, int amount, StatTaskType type) {
@@ -145,18 +173,32 @@ public class QuestManager {
                     }));
         }
 
+        onTaskUpdate(player, questId, task.getTaskId(), questData);
+    }
 
-        QuestsEvents.TASK_PROGRESSION.invoker().taskProgression(player, questId, task.getTaskId());
+    public static void onLocationTaskUpdated(ServerPlayer player, PlayerQuestData questData, ResourceLocation locationId, LocationTaskType type) {
+        if (questData.getCompletionState() == QuestCompletionState.None || questData.getCompletionState() == QuestCompletionState.Completed)
+            return;
+        ResourceLocation questId = questData.getQuestId();
+        Quest quest = getQuest(questId).orElse(null);
+        if (quest == null) return;
 
-        if (questData.checkTaskProgression()) {
-            QuestsEvents.TASK_COMPLETED.invoker().taskCompleted(player, task.getTaskId());
+        QuestTask task = questData.getCurrentTask().orElse(null);
+        if (task == null) return;
 
-            questData.nextTask();
-            if (questData.getCompletionState() == QuestCompletionState.Completed)
-                QuestsEvents.QUEST_COMPLETED.invoker().questCompleted(player, questId);
+        if (task.getTaskType() == TaskType.Location) {
+            LocationTask locationTask = (LocationTask) task;
+            ServerLevel level = (ServerLevel) player.level();
+            if (locationTask.getLocationTaskType() != type || !locationTask.locationMatch(level, locationId)) return;
+            if (!(questData.getCurrentTaskData() instanceof LocationTask.LocationTaskData locationData)) return;
+            locationData.setHasVisitedLocation(true);
         }
 
-        QuestManager.savePlayerData(player);
+        onTaskUpdate(player, questId, task.getTaskId(), questData);
+    }
+
+    // @TODO Implement this to check for Item type tasks
+    public static void onPlayerInventoryChanged() {
     }
 
     public static void onPlayerPickupItem(Player player, ItemEntity itemEntity, ItemStack stack) {
@@ -203,6 +245,24 @@ public class QuestManager {
         return EventResult.pass();
     }
 
+    public static void onPlayerEnteredBiome(ServerPlayer player, ResourceLocation biomeId) {
+        Questslib.getLogger().info("Player {} has entered biome {}", player.getName().getString(), biomeId.toString());
+
+        if (!playersData.containsKey(player)) return;
+
+        PlayerQuestDataMap dataMap = playersData.get(player);
+        dataMap.forEach((questId, questData) -> onLocationTaskUpdated(player, questData, biomeId, LocationTaskType.Biome));
+    }
+
+    public static void onPlayerEnteredStructure(ServerPlayer player, ResourceLocation biomeId) {
+        Questslib.getLogger().info("Player {} has entered structure {}", player.getName().getString(), biomeId.toString());
+
+        if (!playersData.containsKey(player)) return;
+
+        PlayerQuestDataMap dataMap = playersData.get(player);
+        dataMap.forEach((questId, questData) -> onLocationTaskUpdated(player, questData, biomeId, LocationTaskType.Structure));
+    }
+
     public static float getPlayerProgression(Player player, ResourceLocation questId) {
         if (!playersData.containsKey(player)) return 0.0f;
 
@@ -212,11 +272,6 @@ public class QuestManager {
         PlayerQuestData questData = dataMap.get(questId);
 
         return questData.getCurrentTaskData().getProgression();
-    }
-
-    public static Optional<QuestTask> getTask(ResourceLocation questId, int taskId) {
-        Optional<Quest> quest = getQuest(questId);
-        return quest.map(value -> value.getTask(taskId));
     }
 
     public static class PlayerQuestDataMap extends HashMap<ResourceLocation, PlayerQuestData> {
