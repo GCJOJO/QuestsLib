@@ -27,6 +27,22 @@ public class PlayerQuestData {
         Questslib.getLogger().warn("Feur !");
     }
 
+    public static PlayerQuestData deserialize(ResourceLocation questId, CompoundTag nbt) {
+        PlayerQuestData newData = new PlayerQuestData(questId);
+        if (nbt.contains("State"))
+            newData.completionState = QuestCompletionState.fromId(nbt.getString("State"));
+        if (nbt.contains("CurrentTask"))
+            newData.currentTaskId = nbt.getInt("CurrentTask");
+        if (nbt.contains("TaskData")) {
+            QuestManager.getTask(newData.questId, newData.currentTaskId).ifPresent(questTask -> {
+                newData.currentTaskData = questTask.getNewTaskData();
+                newData.currentTaskData.deserialize(nbt.getCompound("TaskData"));
+            });
+        }
+
+        return newData;
+    }
+
     public boolean checkTaskProgression() {
         if (currentTaskData != null)
             return currentTaskData.checkProgression();

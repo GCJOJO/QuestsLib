@@ -25,7 +25,7 @@ public final class Questslib {
 
     public static void init() {
         QuestManager.initEvent();
-        PlayerDataRegistry.register(QuestPlayerData.class, QuestPlayerData::new);
+        PlayerDataRegistry.register(QuestPlayerSaveData.class, QuestPlayerSaveData::new);
 
         QuestLoader.registerDefaultTaskClasses();
         QuestTaskDataRegistry.register(StatTask.class, StatTask.StatTaskData::new);

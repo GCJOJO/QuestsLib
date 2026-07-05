@@ -8,7 +8,7 @@ import dev.architectury.event.events.common.PlayerEvent;
 import dev.architectury.platform.Platform;
 import dev.architectury.utils.value.IntValue;
 import io.github.gcjojo.liblib.LibLib;
-import io.github.gcjojo.questslib.QuestPlayerData;
+import io.github.gcjojo.questslib.QuestPlayerSaveData;
 import io.github.gcjojo.questslib.Questslib;
 import io.github.gcjojo.questslib.events.QuestsEvents;
 import io.github.gcjojo.questslib.quests.enums.QuestCompletionState;
@@ -41,13 +41,13 @@ public class QuestManager {
     static ResourceLocation QUEST_PLAYER_DATA_ID = ResourceLocation.tryBuild(Questslib.MOD_ID, "quest_player_data");
 
     public static PlayerQuestDataMap loadPlayerData(Player player) {
-        return LibLib.getPlayerDataManager().deserializePlayerData(player, QUEST_PLAYER_DATA_ID, QuestPlayerData.class).getQuestData();
+        return LibLib.getPlayerDataManager().deserializePlayerData(player, QUEST_PLAYER_DATA_ID, QuestPlayerSaveData.class).getQuestData();
     }
 
     public static void savePlayerData(Player player) {
-        QuestPlayerData questPlayerData = new QuestPlayerData();
-        questPlayerData.setQuestData(playersData.get(player));
-        LibLib.getPlayerDataManager().serializePlayerData(player, questPlayerData, QUEST_PLAYER_DATA_ID);
+        QuestPlayerSaveData questPlayerSaveData = new QuestPlayerSaveData();
+        questPlayerSaveData.setQuestData(playersData.get(player));
+        LibLib.getPlayerDataManager().serializePlayerData(player, questPlayerSaveData, QUEST_PLAYER_DATA_ID);
     }
 
     public static PlayerQuestDataMap getPlayerQuests(Player player) {
@@ -65,7 +65,7 @@ public class QuestManager {
     }
 
     public static Optional<PlayerQuestData> getPlayerQuestData(Player player, ResourceLocation questId) {
-        if (!playersData.containsValue(player))
+        if (!playersData.containsKey(player))
             playersData.putIfAbsent(player, new PlayerQuestDataMap());
 
         PlayerQuestDataMap playerData = playersData.get(player);
@@ -96,7 +96,6 @@ public class QuestManager {
     }
 
     public static void onPlayerLeave(ServerPlayer player) {
-        savePlayerData(player);
         playersData.remove(player);
     }
 
@@ -132,7 +131,7 @@ public class QuestManager {
             statData.addAmount(amount);
         } else if (task.getTaskType() == TaskType.Any || task.getTaskType() == TaskType.All) {
             CompositeTask compositeTask = (CompositeTask) task;
-            if (!(questData.getCurrentTaskData() instanceof CompositeTask.CompositeTaskData compositeData))
+            if (!(questData.getCurrentTaskData() instanceof CompositeTask.CompositeTaskData<? extends CompositeTask> compositeData))
                 return;
 
             compositeTask.getSubtasks().keySet().stream().filter(
@@ -156,6 +155,8 @@ public class QuestManager {
             if (questData.getCompletionState() == QuestCompletionState.Completed)
                 QuestsEvents.QUEST_COMPLETED.invoker().questCompleted(player, questId);
         }
+
+        QuestManager.savePlayerData(player);
     }
 
     public static void onPlayerPickupItem(Player player, ItemEntity itemEntity, ItemStack stack) {
@@ -211,6 +212,11 @@ public class QuestManager {
         PlayerQuestData questData = dataMap.get(questId);
 
         return questData.getCurrentTaskData().getProgression();
+    }
+
+    public static Optional<QuestTask> getTask(ResourceLocation questId, int taskId) {
+        Optional<Quest> quest = getQuest(questId);
+        return quest.map(value -> value.getTask(taskId));
     }
 
     public static class PlayerQuestDataMap extends HashMap<ResourceLocation, PlayerQuestData> {
