@@ -142,8 +142,10 @@ public class QuestManager {
             getTask(questId, taskId).ifPresent(task -> task.rewardPlayer(player));
 
             questData.nextTask();
-            if (questData.getCompletionState() == QuestCompletionState.Completed)
+            if (questData.getCompletionState() == QuestCompletionState.Completed) {
                 QuestsEvents.QUEST_COMPLETED.invoker().questCompleted(player, questId);
+                getQuest(questId).ifPresent(quest -> quest.rewardPlayer(player));
+            }
         }
     }
 

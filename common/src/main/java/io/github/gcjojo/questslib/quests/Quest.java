@@ -4,6 +4,7 @@ import io.github.gcjojo.questslib.quests.rewards.QuestReward;
 import lombok.Getter;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.player.Player;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
@@ -39,5 +40,9 @@ public class Quest {
 
     public int getTaskAmount() {
         return tasks.size();
+    }
+
+    public void rewardPlayer(Player player) {
+        rewards.forEach(reward -> reward.rewardPlayer(player));
     }
 }

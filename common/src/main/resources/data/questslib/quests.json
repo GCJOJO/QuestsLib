@@ -35,6 +35,18 @@
           }
         ]
       }
+    ],
+    "rewards": [
+      {
+        "reward": "questslib:item",
+        "item": "minecraft:diamond",
+        "amount": 1
+      },
+      {
+        "reward": "questslib:item",
+        "item": "minecraft:furnace",
+        "amount": 2
+      }
     ]
   },
   {
@@ -47,7 +59,14 @@
         "id": "questslib:quest_2_jungle",
         "name": "Go to a jungle",
         "location_type": "biome",
-        "location": "minecraft:jungle"
+        "location": "minecraft:jungle",
+        "rewards": [
+          {
+            "reward": "questslib:item",
+            "item": "minecraft:crafting_table",
+            "amount": 2
+          }
+        ]
       },
       {
         "task": "questslib:location",

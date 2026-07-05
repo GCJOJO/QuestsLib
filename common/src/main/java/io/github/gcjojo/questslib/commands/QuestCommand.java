@@ -42,7 +42,10 @@ public class QuestCommand {
                                                 builder.suggest(state.getStateString());
                                             return builder.buildFuture();
                                         })
-                                        .executes(QuestCommand::setQuestState)))));
+                                        .executes(QuestCommand::setQuestState))))
+                .then(Commands.literal("reset")
+                        .requires(commandSourceStack -> commandSourceStack.hasPermission(Commands.LEVEL_GAMEMASTERS))
+                        .executes(QuestCommand::resetQuestState)));
     }
 
     public static CompletableFuture<Suggestions> suggestQuests(CommandContext<CommandSourceStack> context, SuggestionsBuilder builder) {
@@ -84,6 +87,12 @@ public class QuestCommand {
         ResourceLocation questId = ResourceLocationArgument.getId(context, "quest");
         QuestCompletionState newState = QuestCompletionState.fromId(StringArgumentType.getString(context, "state"));
         QuestManager.getPlayerQuestData(player, questId).ifPresent(quest -> quest.setCompletionState(newState));
+        return Command.SINGLE_SUCCESS;
+    }
+
+    public static int resetQuestState(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        QuestManager.getPlayerQuests(player).clear();
         return Command.SINGLE_SUCCESS;
     }
 
