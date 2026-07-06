@@ -22,6 +22,7 @@ import io.github.gcjojo.questslib.quests.tasks.StatTask;
 import lombok.Getter;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -57,6 +58,10 @@ public class QuestManager {
         if (!playersData.containsKey(player)) return new PlayerQuestDataMap();
 
         return playersData.get(player);
+    }
+
+    public static void setPlayerQuests(Player player, PlayerQuestDataMap dataMap) {
+        playersData.put(player, dataMap);
     }
 
     public static PlayerQuestDataMap getPlayerQuestsByState(Player player, QuestCompletionState state) {
@@ -125,6 +130,7 @@ public class QuestManager {
         PlayerEvent.PLAYER_QUIT.register(QuestManager::onPlayerLeave);
 
         PlayerEvent.PICKUP_ITEM_POST.register(QuestManager::onPlayerPickupItem);
+        LibLibEvents.PLAYER_INVENTORY_CHANGED.register(QuestManager::onPlayerInventoryChanged);
         BlockEvent.BREAK.register(QuestManager::onPlayerBreakBlock);
         BlockEvent.PLACE.register(QuestManager::onEntityPlaceBlock);
 
@@ -152,6 +158,7 @@ public class QuestManager {
     public static void onStatTaskUpdate(Player player, PlayerQuestData questData, ResourceLocation targetId, int amount, StatTaskType type) {
         if (questData.getCompletionState() == QuestCompletionState.None || questData.getCompletionState() == QuestCompletionState.Completed)
             return;
+
         ResourceLocation questId = questData.getQuestId();
         Quest quest = getQuest(questId).orElse(null);
         if (quest == null) return;
@@ -224,9 +231,12 @@ public class QuestManager {
         onTaskUpdate(player, questId, task.getTaskId(), questData);
     }
 
-    // @TODO Implement this to check for Item type tasks
-    public static void onPlayerInventoryChanged() {
+    public static void onPlayerInventoryChanged(Player player, Map<ResourceLocation, Integer> inventoryDifference) {
+        PlayerQuestDataMap dataMap = playersData.get(player);
 
+        dataMap.forEach((questId, questData) -> {
+            inventoryDifference.forEach((itemId, amount) -> onStatTaskUpdate(player, questData, itemId, amount, StatTaskType.Item));
+        });
     }
 
     public static void onPlayerPickupItem(Player player, ItemEntity itemEntity, ItemStack stack) {
@@ -235,7 +245,29 @@ public class QuestManager {
         PlayerQuestDataMap dataMap = playersData.get(player);
         ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
         int stackAmount = stack.getCount();
-        dataMap.forEach((questId, questData) -> onStatTaskUpdate(player, questData, itemId, stackAmount, StatTaskType.Item));
+        dataMap.forEach((questId, questData) -> {
+            if (isStackUsedForQuest(stack, player, questId)) return;
+            onStatTaskUpdate(player, questData, itemId, stackAmount, StatTaskType.Item);
+            markStackAsUsedForQuest(stack, player, questId);
+        });
+    }
+
+    public static void markStackAsUsedForQuest(ItemStack stack, Player player, ResourceLocation questId) {
+        CompoundTag nbt = stack.getOrCreateTag();
+        if (!nbt.contains("Quests"))
+            nbt.put("Quests", new CompoundTag());
+
+
+        if (!nbt.getCompound("Quests").contains(player.getStringUUID()))
+            nbt.getCompound("Quests").put(player.getStringUUID(), new CompoundTag());
+
+        nbt.getCompound("Quests").getCompound(player.getStringUUID()).put(questId.toString(), new CompoundTag());
+    }
+
+    public static boolean isStackUsedForQuest(ItemStack stack, Player player, ResourceLocation questId) {
+        CompoundTag nbt = stack.getOrCreateTag();
+        return nbt.contains("Quests") && nbt.getCompound("Quests").contains(player.getStringUUID()) &&
+                nbt.getCompound("Quests").getCompound(player.getStringUUID()).contains(questId.toString());
     }
 
     public static EventResult onPlayerBreakBlock(Level level, BlockPos pos, BlockState state, ServerPlayer player, IntValue xp) {

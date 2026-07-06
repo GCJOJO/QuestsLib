@@ -5,12 +5,32 @@ import io.github.gcjojo.questslib.quests.enums.QuestCompletionState;
 import lombok.Getter;
 import lombok.Setter;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.Optional;
 
 @Getter
 public class PlayerQuestData {
+    public static final FriendlyByteBuf.Reader<PlayerQuestData> READER = buf -> {
+        ResourceLocation questId = buf.readResourceLocation();
+        PlayerQuestData questData = new PlayerQuestData(questId);
+        questData.completionState = QuestCompletionState.fromId(buf.readUtf());
+        questData.currentTaskId = buf.readInt();
+        questData.getCurrentTask().ifPresent(task -> {
+            questData.currentTaskData = task.getNewTaskData();
+            questData.currentTaskData.deserialize(buf.readNbt());
+        });
+
+        return questData;
+    };
+    public static final FriendlyByteBuf.Writer<PlayerQuestData> WRITER = (buf, questData) -> {
+        buf.writeResourceLocation(questData.getQuestId());
+        buf.writeUtf(questData.getCompletionState().getStateString());
+        buf.writeInt(questData.getCurrentTaskId());
+        buf.writeNbt(questData.currentTaskData.serialize());
+    };
+
     private final ResourceLocation questId;
     private @Setter QuestCompletionState completionState;
     private int currentTaskId;
@@ -53,10 +73,12 @@ public class PlayerQuestData {
         Quest quest = QuestManager.getQuest(questId).orElse(null);
         if (quest == null) return;
 
-        if (++currentTaskId >= quest.getTaskAmount()) {
+        if (currentTaskId + 1 >= quest.getTaskAmount()) {
             completionState = QuestCompletionState.Completed;
             return;
         }
+
+        currentTaskId++;
 
         QuestTask newTask = quest.getTask(currentTaskId);
         assert newTask != null;
