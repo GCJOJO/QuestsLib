@@ -84,7 +84,7 @@ public abstract class QuestTask {
         public abstract void deserialize(CompoundTag nbt);
     }
 
-    private class EmptyQuestTaskData extends QuestTaskData<QuestTask> {
+    private static class EmptyQuestTaskData extends QuestTaskData<QuestTask> {
         public EmptyQuestTaskData(@NotNull QuestTask parentTask) {
             super(parentTask);
         }

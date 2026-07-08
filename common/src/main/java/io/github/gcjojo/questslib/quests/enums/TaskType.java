@@ -5,5 +5,6 @@ public enum TaskType {
     Location,
     Any,
     All,
-    //CompleteDialogue,
+    Manual,
+    CompleteDialogue,
 }

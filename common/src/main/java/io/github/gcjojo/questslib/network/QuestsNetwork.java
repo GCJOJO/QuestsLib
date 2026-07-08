@@ -5,7 +5,7 @@ import io.github.gcjojo.liblib.LibLib;
 import io.github.gcjojo.questslib.QuestsLib;
 import io.github.gcjojo.questslib.client.gui.QuestScreen;
 import io.github.gcjojo.questslib.quests.PlayerQuestData;
-import io.github.gcjojo.questslib.quests.QuestManager;
+import io.github.gcjojo.questslib.quests.QuestsManager;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -30,9 +30,9 @@ public class QuestsNetwork {
         NetworkManager.registerReceiver(NetworkManager.Side.S2C, SEND_QUESTS_DATA_PACKET_ID, (buf, context) -> {
             try {
                 Map<ResourceLocation, PlayerQuestData> map = buf.readMap(FriendlyByteBuf::readResourceLocation, PlayerQuestData.READER);
-                QuestManager.PlayerQuestDataMap playerQuestDataMap = new QuestManager.PlayerQuestDataMap();
+                QuestsManager.PlayerQuestDataMap playerQuestDataMap = new QuestsManager.PlayerQuestDataMap();
                 playerQuestDataMap.putAll(map);
-                QuestManager.setPlayerQuests(context.getPlayer(), playerQuestDataMap);
+                QuestsManager.setPlayerQuests(context.getPlayer(), playerQuestDataMap);
             } catch (Exception e) {
                 LibLib.printException("Couldn't receive quest data from server !", e);
             }

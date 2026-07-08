@@ -6,10 +6,7 @@ import io.github.gcjojo.questslib.quests.factory.QuestRewardFactory;
 import io.github.gcjojo.questslib.quests.factory.QuestTaskDataRegistry;
 import io.github.gcjojo.questslib.quests.rewards.ItemReward;
 import io.github.gcjojo.questslib.quests.rewards.QuestReward;
-import io.github.gcjojo.questslib.quests.tasks.AllTask;
-import io.github.gcjojo.questslib.quests.tasks.AnyTask;
-import io.github.gcjojo.questslib.quests.tasks.LocationTask;
-import io.github.gcjojo.questslib.quests.tasks.StatTask;
+import io.github.gcjojo.questslib.quests.tasks.*;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
@@ -29,11 +26,16 @@ public class QuestLoader {
         registerTaskClass(ResourceLocation.tryBuild(QuestsLib.MOD_ID, "location"), LocationTask.class);
         registerTaskClass(ResourceLocation.tryBuild(QuestsLib.MOD_ID, "any"), AnyTask.class);
         registerTaskClass(ResourceLocation.tryBuild(QuestsLib.MOD_ID, "all"), AllTask.class);
+        registerTaskClass(ResourceLocation.tryBuild(QuestsLib.MOD_ID, "manual"), ManualTask.class);
+        registerTaskClass(ResourceLocation.tryBuild(QuestsLib.MOD_ID, "dialogue"), DialogueTask.class);
+
 
         QuestTaskDataRegistry.register(StatTask.class, StatTask.StatTaskData::new);
         QuestTaskDataRegistry.register(LocationTask.class, LocationTask.LocationTaskData::new);
         QuestTaskDataRegistry.register(AnyTask.class, AnyTask.AnyTaskData::new);
         QuestTaskDataRegistry.register(AllTask.class, AllTask.AllTaskData::new);
+        QuestTaskDataRegistry.register(ManualTask.class, ManualTask.ManualTaskData::new);
+        QuestTaskDataRegistry.register(DialogueTask.class, DialogueTask.DialogueTaskData::new);
     }
 
     public static void registerDefaultRewards() {
@@ -84,6 +86,12 @@ public class QuestLoader {
         else
             questDescription = Component.empty();
 
+        Optional<? extends QuestTask> trigger = Optional.empty();
+        if (json.has("trigger")) {
+            JsonObject triggerJson = json.getAsJsonObject("trigger");
+            trigger = constructTask(triggerJson);
+        }
+
         List<QuestTask> tasks = new ArrayList<>();
 
         if (json.has("tasks")) {
@@ -106,7 +114,7 @@ public class QuestLoader {
             });
         }
 
-        return Optional.of(new Quest(questId, questName, questDescription, tasks, rewards));
+        return Optional.of(new Quest(questId, questName, questDescription, trigger, tasks, rewards));
     }
 
     public static Optional<QuestTask> constructTask(JsonObject json) {

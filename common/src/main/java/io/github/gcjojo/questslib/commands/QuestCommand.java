@@ -11,8 +11,7 @@ import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import dev.architectury.networking.NetworkManager;
 import io.github.gcjojo.questslib.network.QuestsNetwork;
 import io.github.gcjojo.questslib.quests.PlayerQuestData;
-import io.github.gcjojo.questslib.quests.QuestManager;
-import io.github.gcjojo.questslib.quests.QuestTask;
+import io.github.gcjojo.questslib.quests.QuestsManager;
 import io.github.gcjojo.questslib.quests.enums.QuestCompletionState;
 import io.netty.buffer.Unpooled;
 import net.minecraft.ChatFormatting;
@@ -50,11 +49,26 @@ public class QuestCommand {
                                         .executes(QuestCommand::setQuestState))))
                 .then(Commands.literal("reset")
                         .requires(commandSourceStack -> commandSourceStack.hasPermission(Commands.LEVEL_GAMEMASTERS))
-                        .executes(QuestCommand::resetQuestState)));
+                        .executes(QuestCommand::resetQuestState))
+                .then(Commands.literal("task")
+                        .requires(commandSourceStack -> commandSourceStack.hasPermission(Commands.LEVEL_GAMEMASTERS))
+                        .then(Commands.argument("quest", ResourceLocationArgument.id())
+                                .suggests(QuestCommand::suggestQuests)
+                                .then(Commands.argument("task", ResourceLocationArgument.id())
+                                        .suggests(QuestCommand::suggestTasks)
+                                        .executes(QuestCommand::setTask)))));
     }
 
     public static CompletableFuture<Suggestions> suggestQuests(CommandContext<CommandSourceStack> context, SuggestionsBuilder builder) {
-        QuestManager.getQuests().keySet().forEach(questId -> builder.suggest(questId.toString()));
+        QuestsManager.getQuests().keySet().forEach(questId -> builder.suggest(questId.toString()));
+        return builder.buildFuture();
+    }
+
+    public static CompletableFuture<Suggestions> suggestTasks(CommandContext<CommandSourceStack> context, SuggestionsBuilder builder) {
+        ResourceLocation questId = ResourceLocationArgument.getId(context, "quest");
+        QuestsManager.getQuest(questId).ifPresent(quest -> quest.getTasks().forEach(task -> {
+            builder.suggest(task.getTaskId().toString());
+        }));
         return builder.buildFuture();
     }
 
@@ -62,7 +76,7 @@ public class QuestCommand {
         ServerPlayer player = context.getSource().getPlayerOrException();
 
         FriendlyByteBuf questsBuf = new FriendlyByteBuf(Unpooled.buffer());
-        QuestManager.PlayerQuestDataMap playerQuestDataMap = QuestManager.getPlayerQuests(player);
+        QuestsManager.PlayerQuestDataMap playerQuestDataMap = QuestsManager.getPlayerQuests(player);
         questsBuf.writeMap(playerQuestDataMap, FriendlyByteBuf::writeResourceLocation, PlayerQuestData.WRITER);
 
         NetworkManager.sendToPlayer(player, QuestsNetwork.SEND_QUESTS_DATA_PACKET_ID, questsBuf);
@@ -72,8 +86,8 @@ public class QuestCommand {
 
     public static int listQuests(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         ServerPlayer player = context.getSource().getPlayerOrException();
-        QuestManager.PlayerQuestDataMap quests = QuestManager.getPlayerQuestsByState(player, QuestCompletionState.Started);
-        quests.putAll(QuestManager.getPlayerQuestsByState(player, QuestCompletionState.Completed));
+        QuestsManager.PlayerQuestDataMap quests = QuestsManager.getPlayerQuestsByState(player, QuestCompletionState.Started);
+        quests.putAll(QuestsManager.getPlayerQuestsByState(player, QuestCompletionState.Completed));
 
         quests.forEach((questId, playerQuestData) -> {
             sendPlayerQuestInformation(player, questId, playerQuestData);
@@ -85,13 +99,13 @@ public class QuestCommand {
     public static int seeQuestProgression(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         ServerPlayer player = context.getSource().getPlayerOrException();
         ResourceLocation questId = ResourceLocationArgument.getId(context, "quest");
-        Optional<PlayerQuestData> playerQuestDataOpt = QuestManager.getPlayerQuestData(player, questId);
+        Optional<PlayerQuestData> playerQuestDataOpt = QuestsManager.getPlayerQuestData(player, questId);
         if (playerQuestDataOpt.isPresent()) {
             sendPlayerQuestInformation(player, questId, playerQuestDataOpt.get());
             return Command.SINGLE_SUCCESS;
         }
 
-        if (QuestManager.getQuest(questId).isEmpty())
+        if (QuestsManager.getQuest(questId).isEmpty())
             player.sendSystemMessage(Component.literal(String.format("Cannot find quest %s", questId)).withStyle(ChatFormatting.RED));
         else
             player.sendSystemMessage(Component.literal(String.format("You have not started quest %s", questId)).withStyle(ChatFormatting.RED));
@@ -103,37 +117,49 @@ public class QuestCommand {
         ServerPlayer player = context.getSource().getPlayerOrException();
         ResourceLocation questId = ResourceLocationArgument.getId(context, "quest");
         QuestCompletionState newState = QuestCompletionState.fromId(StringArgumentType.getString(context, "state"));
-        QuestManager.getPlayerQuestData(player, questId).ifPresent(quest -> quest.setCompletionState(newState));
+        QuestsManager.getPlayerQuestData(player, questId).ifPresent(quest -> quest.setCompletionState(newState));
         return Command.SINGLE_SUCCESS;
     }
 
     public static int resetQuestState(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         ServerPlayer player = context.getSource().getPlayerOrException();
-        QuestManager.getPlayerQuests(player).clear();
+        QuestsManager.getPlayerQuests(player).clear();
+        return Command.SINGLE_SUCCESS;
+    }
+
+    public static int setTask(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        ResourceLocation questId = ResourceLocationArgument.getId(context, "quest");
+        ResourceLocation taskId = ResourceLocationArgument.getId(context, "task");
+
+        QuestsManager.getPlayerQuestData(player, questId).ifPresent(quest -> quest.setCurrentTask(taskId));
         return Command.SINGLE_SUCCESS;
     }
 
     public static void sendPlayerQuestInformation(ServerPlayer player, ResourceLocation questId, PlayerQuestData playerQuestData) {
-        QuestManager.getQuest(questId).ifPresent(quest -> {
+        QuestsManager.getQuest(questId).ifPresent(quest -> {
             ChatFormatting questColor = ChatFormatting.GOLD;
             if (playerQuestData.getCompletionState() == QuestCompletionState.Completed)
                 questColor = ChatFormatting.GREEN;
 
             player.sendSystemMessage(Component.literal(quest.getQuestName().getString()).withStyle(questColor));
-            int currentTaskNumber = playerQuestData.getCurrentTaskId();
+            int currentTaskNumber = playerQuestData.getCurrentTaskIndex();
             for (int taskNumber = 0; taskNumber <= quest.getTaskAmount(); taskNumber++) {
-                QuestTask task = quest.getTask(taskNumber);
-                ChatFormatting messageColor = ChatFormatting.GREEN;
-                char frontCharacter = '✓';
-                if (taskNumber == currentTaskNumber) {
-                    messageColor = ChatFormatting.GOLD;
-                    frontCharacter = '>';
-                } else if (taskNumber > currentTaskNumber) {
-                    messageColor = ChatFormatting.DARK_GRAY;
-                    frontCharacter = '✕';
-                }
-                if (task != null && task.getTaskName() != null)
+                final int finalTaskNumber = taskNumber;
+                quest.getTask(taskNumber).ifPresent(task -> {
+                    ChatFormatting messageColor = ChatFormatting.GREEN;
+                    char frontCharacter = '✓';
+                    if (playerQuestData.getCompletionState() != QuestCompletionState.Completed) {
+                        if (finalTaskNumber == currentTaskNumber) {
+                            messageColor = ChatFormatting.GOLD;
+                            frontCharacter = '>';
+                        } else if (finalTaskNumber > currentTaskNumber) {
+                            messageColor = ChatFormatting.DARK_GRAY;
+                            frontCharacter = '✕';
+                        }
+                    }
                     player.sendSystemMessage(Component.literal(String.format("%s   %s", frontCharacter, task.getTaskName().getString())).withStyle(messageColor));
+                });
             }
         });
     }

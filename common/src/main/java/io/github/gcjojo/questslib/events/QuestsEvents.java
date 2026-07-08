@@ -15,7 +15,7 @@ public interface QuestsEvents {
     }
 
     interface TaskCompleted {
-        void taskCompleted(Player player, ResourceLocation taskId);
+        void taskCompleted(Player player, ResourceLocation questId, ResourceLocation taskId);
     }
 
     interface QuestCompleted {

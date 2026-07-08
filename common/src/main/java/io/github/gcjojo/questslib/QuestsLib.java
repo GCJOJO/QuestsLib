@@ -7,8 +7,9 @@ import io.github.gcjojo.liblib.factory.PlayerDataRegistry;
 import io.github.gcjojo.questslib.api.QuestsLibAPIImpl;
 import io.github.gcjojo.questslib.events.QuestsEvents;
 import io.github.gcjojo.questslib.network.QuestsNetwork;
+import io.github.gcjojo.questslib.quests.GameEventsListener;
 import io.github.gcjojo.questslib.quests.QuestLoader;
-import io.github.gcjojo.questslib.quests.QuestManager;
+import io.github.gcjojo.questslib.quests.QuestsManager;
 import net.minecraft.network.chat.Component;
 import org.slf4j.Logger;
 
@@ -24,7 +25,7 @@ public final class QuestsLib {
     }
 
     public static void init() {
-        QuestManager.initEvent();
+        GameEventsListener.initEvent();
         PlayerDataRegistry.register(QuestPlayerSaveData.class, QuestPlayerSaveData::new);
 
         QuestLoader.registerDefaultTaskClasses();
@@ -35,11 +36,11 @@ public final class QuestsLib {
         QuestsEvents.QUEST_COMPLETED.register((player, questId) ->
                 QuestsLibAPI.QUEST_COMPLETED.invoker().onQuestCompleted(player, questId));
 
-        QuestsEvents.TASK_COMPLETED.register((player, taskId) ->
-                QuestsLibAPI.TASK_COMPLETED.invoker().onTaskCompleted(player, taskId));
+        QuestsEvents.TASK_COMPLETED.register((player, questId, taskId) ->
+                QuestsLibAPI.TASK_COMPLETED.invoker().onTaskCompleted(player, questId, taskId));
 
         QuestsEvents.TASK_PROGRESSION.register((player, questId, taskId) -> {
-            float progression = QuestManager.getPlayerProgression(player, questId);
+            float progression = QuestsManager.getPlayerProgression(player, questId);
             player.sendSystemMessage(Component.literal(String.format("Progression on task %s is %.2f", taskId, progression)));
         });
 
