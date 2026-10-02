@@ -13,12 +13,10 @@ import io.github.gcjojo.questslib.network.QuestsNetwork;
 import io.github.gcjojo.questslib.quests.PlayerQuestData;
 import io.github.gcjojo.questslib.quests.QuestsManager;
 import io.github.gcjojo.questslib.quests.enums.QuestCompletionState;
-import io.netty.buffer.Unpooled;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.ResourceLocationArgument;
-import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -75,12 +73,11 @@ public class QuestCommand {
     public static int openQuestsScreen(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         ServerPlayer player = context.getSource().getPlayerOrException();
 
-        FriendlyByteBuf questsBuf = new FriendlyByteBuf(Unpooled.buffer());
-        QuestsManager.PlayerQuestDataMap playerQuestDataMap = QuestsManager.getPlayerQuests(player);
-        questsBuf.writeMap(playerQuestDataMap, FriendlyByteBuf::writeResourceLocation, PlayerQuestData.WRITER);
 
-        NetworkManager.sendToPlayer(player, QuestsNetwork.SEND_QUESTS_DATA_PACKET_ID, questsBuf);
-        NetworkManager.sendToPlayer(player, QuestsNetwork.OPEN_QUESTS_SCREEN_PACKET_ID, new FriendlyByteBuf(Unpooled.buffer()));
+        QuestsManager.PlayerQuestDataMap playerQuestDataMap = QuestsManager.getPlayerQuests(player);
+
+        NetworkManager.sendToPlayer(player, new QuestsNetwork.SendQuestsDataPayload(playerQuestDataMap));
+        NetworkManager.sendToPlayer(player, new QuestsNetwork.OpenQuestsScreenPayload());
         return Command.SINGLE_SUCCESS;
     }
 

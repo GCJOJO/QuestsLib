@@ -87,7 +87,7 @@ public class QuestScreen extends GuiScreen {
         GuiText questDescription = new GuiText(this, quest.getQuestDescription());
 
         float progression = questData.getCompletionState() == QuestCompletionState.Completed ? 100.0f : (float) questData.getCurrentTaskIndex() / (float) quest.getTaskAmount() * 100;
-        GuiProgressBar.BarColor progressBarColor = questData.getCompletionState() == QuestCompletionState.Completed ? GuiProgressBar.BarColor.Green : GuiProgressBar.BarColor.Orange;
+        GuiProgressBar.BarColor progressBarColor = questData.getCompletionState() == QuestCompletionState.Completed ? GuiProgressBar.BarColor.Green : GuiProgressBar.BarColor.Red;
 
         GuiProgressBar questProgression = new GuiProgressBar(this, 0.0f, 100.0f, progression, 6, (int) (this.width * 0.5f - 40),
                 GuiProgressBar.ProgressBarDirection.Horizontal, progressBarColor, GuiProgressBar.BarColor.Gray);

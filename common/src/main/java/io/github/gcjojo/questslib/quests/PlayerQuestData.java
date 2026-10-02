@@ -4,7 +4,8 @@ import io.github.gcjojo.questslib.quests.enums.QuestCompletionState;
 import lombok.Getter;
 import lombok.Setter;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.Optional;
@@ -12,24 +13,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 @Getter
 public class PlayerQuestData {
-    public static final FriendlyByteBuf.Reader<PlayerQuestData> READER = buf -> {
-        ResourceLocation questId = buf.readResourceLocation();
-        PlayerQuestData questData = new PlayerQuestData(questId);
-        questData.completionState = QuestCompletionState.fromId(buf.readUtf());
-        questData.currentTaskIndex = buf.readInt();
-        questData.getCurrentTask().ifPresent(task -> {
-            questData.currentTaskData = task.getNewTaskData();
-            questData.currentTaskData.deserialize(buf.readNbt());
-        });
-
-        return questData;
-    };
-    public static final FriendlyByteBuf.Writer<PlayerQuestData> WRITER = (buf, questData) -> {
-        buf.writeResourceLocation(questData.getQuestId());
-        buf.writeUtf(questData.getCompletionState().getStateString());
-        buf.writeInt(questData.getCurrentTaskIndex());
-        buf.writeNbt(questData.currentTaskData.serialize());
-    };
+    public static final StreamCodec<RegistryFriendlyByteBuf, PlayerQuestData> STREAM_CODEC = StreamCodec.of(
+            PlayerQuestData::write,
+            PlayerQuestData::read
+    );
 
     private final ResourceLocation questId;
     private @Setter QuestCompletionState completionState;
@@ -41,6 +28,35 @@ public class PlayerQuestData {
         this.completionState = QuestCompletionState.None;
         this.currentTaskIndex = 0;
         QuestsManager.getQuest(this.questId).flatMap(quest -> quest.getTask(currentTaskIndex)).ifPresent(task -> currentTaskData = task.getNewTaskData());
+    }
+
+    public static PlayerQuestData read(RegistryFriendlyByteBuf buf) {
+        ResourceLocation questId = buf.readResourceLocation();
+        PlayerQuestData questData = new PlayerQuestData(questId);
+        questData.completionState = QuestCompletionState.fromId(buf.readUtf());
+        questData.currentTaskIndex = buf.readInt();
+
+        questData.getCurrentTask().ifPresent(task -> {
+            questData.currentTaskData = task.getNewTaskData();
+            CompoundTag nbt = buf.readNbt();
+            if (nbt != null) {
+                questData.currentTaskData.deserialize(nbt);
+            }
+        });
+
+        return questData;
+    }
+
+    public static void write(RegistryFriendlyByteBuf buf, PlayerQuestData questData) {
+        buf.writeResourceLocation(questData.getQuestId());
+        buf.writeUtf(questData.getCompletionState().getStateString());
+        buf.writeInt(questData.getCurrentTaskIndex());
+
+        if (questData.currentTaskData != null) {
+            buf.writeNbt(questData.currentTaskData.serialize());
+        } else {
+            buf.writeNbt(new CompoundTag());
+        }
     }
 
     public static PlayerQuestData deserialize(ResourceLocation questId, CompoundTag nbt) {

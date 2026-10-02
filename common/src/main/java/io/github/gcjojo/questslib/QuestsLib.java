@@ -44,6 +44,7 @@ public final class QuestsLib {
             player.sendSystemMessage(Component.literal(String.format("Progression on task %s is %.2f", taskId, progression)));
         });
 
+        QuestsNetwork.registerPayloadTypes();
         QuestsNetwork.registerPackets();
     }
 

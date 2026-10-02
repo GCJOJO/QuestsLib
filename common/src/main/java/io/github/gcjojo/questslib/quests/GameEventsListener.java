@@ -19,6 +19,7 @@ import io.github.gcjojo.questslib.quests.tasks.DialogueTask;
 import io.github.gcjojo.questslib.quests.tasks.LocationTask;
 import io.github.gcjojo.questslib.quests.tasks.StatTask;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
@@ -30,6 +31,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -60,6 +62,10 @@ public class GameEventsListener {
         LibLibEvents.PLAYER_INVENTORY_CHANGED.register(GameEventsListener::onPlayerInventoryChanged);
         BlockEvent.BREAK.register(GameEventsListener::onPlayerBreakBlock);
         BlockEvent.PLACE.register(GameEventsListener::onEntityPlaceBlock);
+
+        PlayerEvent.CRAFT_ITEM.register((player, stack, craftMatrix) -> {
+            System.out.println(player.getName().getString() + " a crafté : " + stack);
+        });
 
         EntityEvent.LIVING_DEATH.register(GameEventsListener::onEntityDie);
 
@@ -296,7 +302,7 @@ public class GameEventsListener {
     }
 
     public static void markStackAsUsedForQuest(ItemStack stack, Player player, ResourceLocation questId) {
-        CompoundTag nbt = stack.getOrCreateTag();
+        CompoundTag nbt = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
         if (!nbt.contains("Quests"))
             nbt.put("Quests", new CompoundTag());
 
@@ -305,10 +311,11 @@ public class GameEventsListener {
             nbt.getCompound("Quests").put(player.getStringUUID(), new CompoundTag());
 
         nbt.getCompound("Quests").getCompound(player.getStringUUID()).put(questId.toString(), new CompoundTag());
+        stack.set(DataComponents.CUSTOM_DATA, CustomData.of(nbt));
     }
 
     public static boolean isStackUsedForQuest(ItemStack stack, Player player, ResourceLocation questId) {
-        CompoundTag nbt = stack.getOrCreateTag();
+        CompoundTag nbt = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
         return nbt.contains("Quests") && nbt.getCompound("Quests").contains(player.getStringUUID()) &&
                 nbt.getCompound("Quests").getCompound(player.getStringUUID()).contains(questId.toString());
     }
