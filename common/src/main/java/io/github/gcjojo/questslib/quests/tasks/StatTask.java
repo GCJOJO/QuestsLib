@@ -54,7 +54,7 @@ public class StatTask extends QuestTask {
     }
 
     public Item getItem() {
-        if (statType == StatTaskType.Item && BuiltInRegistries.ITEM.containsKey(this.targetId))
+        if ((statType == StatTaskType.Item || statType == StatTaskType.Craft) && BuiltInRegistries.ITEM.containsKey(this.targetId))
             return BuiltInRegistries.ITEM.get(this.targetId);
         return null;
     }

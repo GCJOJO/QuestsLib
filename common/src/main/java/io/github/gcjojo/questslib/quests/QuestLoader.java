@@ -4,6 +4,7 @@ import com.google.gson.*;
 import io.github.gcjojo.questslib.QuestsLib;
 import io.github.gcjojo.questslib.quests.factory.QuestRewardFactory;
 import io.github.gcjojo.questslib.quests.factory.QuestTaskDataRegistry;
+import io.github.gcjojo.questslib.quests.rewards.ExperienceReward;
 import io.github.gcjojo.questslib.quests.rewards.ItemReward;
 import io.github.gcjojo.questslib.quests.rewards.QuestReward;
 import io.github.gcjojo.questslib.quests.tasks.*;
@@ -40,6 +41,7 @@ public class QuestLoader {
 
     public static void registerDefaultRewards() {
         registerReward(ResourceLocation.tryBuild(QuestsLib.MOD_ID, "item"), ItemReward::new);
+        registerReward(ResourceLocation.tryBuild(QuestsLib.MOD_ID, "experience"), ExperienceReward::new);
     }
 
     public static <T extends QuestTask> void registerTaskClass(ResourceLocation taskName, Class<? extends QuestTask> taskClass) {

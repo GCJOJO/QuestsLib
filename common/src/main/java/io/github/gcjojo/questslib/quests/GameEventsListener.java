@@ -25,6 +25,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.Container;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -60,12 +61,9 @@ public class GameEventsListener {
 
         PlayerEvent.PICKUP_ITEM_POST.register(GameEventsListener::onPlayerPickupItem);
         LibLibEvents.PLAYER_INVENTORY_CHANGED.register(GameEventsListener::onPlayerInventoryChanged);
+        PlayerEvent.CRAFT_ITEM.register(GameEventsListener::onPlayerCraftItem);
         BlockEvent.BREAK.register(GameEventsListener::onPlayerBreakBlock);
         BlockEvent.PLACE.register(GameEventsListener::onEntityPlaceBlock);
-
-        PlayerEvent.CRAFT_ITEM.register((player, stack, craftMatrix) -> {
-            System.out.println(player.getName().getString() + " a crafté : " + stack);
-        });
 
         EntityEvent.LIVING_DEATH.register(GameEventsListener::onEntityDie);
 
@@ -241,6 +239,19 @@ public class GameEventsListener {
         });
     }
 
+    public static void onPlayerCraftItem(Player player, ItemStack stack, Container inventory) {
+        if (!QuestsManager.playersData.containsKey(player)) return;
+
+        QuestsManager.PlayerQuestDataMap dataMap = QuestsManager.playersData.get(player);
+        ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
+        int stackAmount = stack.getCount();
+        dataMap.forEach((questId, questData) -> {
+            if (isStackUsedForQuest(stack, player, questId)) return;
+            onStatTaskUpdate(player, questData, itemId, stackAmount, StatTaskType.Craft);
+            markStackAsUsedForQuest(stack, player, questId);
+        });
+    }
+
     public static EventResult onPlayerBreakBlock(Level level, BlockPos pos, BlockState state, ServerPlayer player, IntValue xp) {
         if (!QuestsManager.playersData.containsKey(player)) return EventResult.pass();
 
@@ -329,7 +340,7 @@ public class GameEventsListener {
     public static boolean checkLocationTask(QuestTask task, ResourceLocation locationId, LocationTaskType type, ServerLevel level) {
         if (task.getTaskType() != TaskType.Location) return false;
         LocationTask locationTask = (LocationTask) task;
-        return locationTask.getLocationTaskType() != type && locationTask.locationMatch(level, locationId);
+        return locationTask.getLocationTaskType() == type && locationTask.locationMatch(level, locationId);
     }
 
     public static boolean checkDialogueTask(QuestTask task, ResourceLocation dialogueId) {

@@ -69,11 +69,30 @@
         ]
       },
       {
+        "task": "questslib:stat",
+        "id": "questslib:quest_2_craft_wooden_sword",
+        "name": "Craft a wooden sword",
+        "stat_type": "craft",
+        "target": "minecraft:wooden_sword",
+        "rewards": [
+          {
+            "reward": "questslib:experience",
+            "points": 50
+          }
+        ]
+      },
+      {
         "task": "questslib:location",
         "id": "questslib:quest_2_village",
         "name": "Go to a village",
         "location_type": "structure",
-        "location": "#minecraft:village"
+        "location": "#minecraft:village",
+        "rewards": [
+          {
+            "reward": "questslib:experience",
+            "levels": 2
+          }
+        ]
       }
     ]
   }

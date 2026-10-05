@@ -6,6 +6,7 @@ import lombok.Getter;
 public enum StatTaskType {
     None("none"),
     Item("item"),
+    Craft("craft"),
     PlacedBlocks("placed_blocks"),
     BrokenBlocks("broken_blocks"),
     KilledMobs("killed_mobs");
