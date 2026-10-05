@@ -65,6 +65,10 @@
             "reward": "questslib:item",
             "item": "minecraft:crafting_table",
             "amount": 2
+          },
+          {
+            "reward": "questslib:loot_table",
+            "loot_table": "minecraft:chests/jungle_temple"
           }
         ]
       },
