@@ -11,17 +11,23 @@ import io.github.gcjojo.questslib.quests.rewards.QuestReward;
 import io.github.gcjojo.questslib.quests.tasks.*;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.packs.resources.ResourceManager;
+import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
+import net.minecraft.util.profiling.ProfilerFiller;
 
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 
-public class QuestLoader {
+public class QuestLoader extends SimpleJsonResourceReloadListener {
 
     private static final Map<ResourceLocation, Class<? extends QuestTask>> questTaskClasses = new HashMap<>();
     private static final Map<ResourceLocation, QuestRewardFactory<? extends QuestReward>> questRewardFactories = new HashMap<>();
+
+    private static final Gson GSON = new GsonBuilder().create();
+
+    public QuestLoader() {
+        super(GSON, "quests");
+    }
 
     public static void registerDefaultTaskClasses() {
         registerTaskClass(ResourceLocation.tryBuild(QuestsLib.MOD_ID, "stat"), StatTask.class);
@@ -52,24 +58,6 @@ public class QuestLoader {
 
     public static <T extends QuestReward> void registerReward(ResourceLocation rewardId, QuestRewardFactory<? extends QuestReward> factory) {
         questRewardFactories.putIfAbsent(rewardId, factory);
-    }
-
-    public static Map<ResourceLocation, Quest> loadQuestFile(MinecraftServer server, String namespace) {
-        Map<ResourceLocation, Quest> quests = new HashMap<>();
-        ResourceLocation questFileLocation = ResourceLocation.tryBuild(namespace, "quests.json");
-        server.getResourceManager().getResource(questFileLocation).ifPresent(questFile -> {
-            try {
-                JsonArray json = new Gson().fromJson(new InputStreamReader(questFile.open()), JsonArray.class);
-                json.forEach(questJson -> loadQuest(questJson.getAsJsonObject()).ifPresent(quest -> quests.put(quest.questId, quest)));
-            } catch (IOException | JsonSyntaxException | JsonIOException e) {
-                if (questFileLocation != null)
-                    QuestsLib.printException(String.format("Unable to parse quest file %s", questFileLocation.toString()), e);
-                else
-                    QuestsLib.printException("Unable to parse quest file", e);
-            }
-        });
-
-        return quests;
     }
 
     public static Optional<Quest> loadQuest(JsonObject json) {
@@ -147,5 +135,27 @@ public class QuestLoader {
     public static Optional<QuestReward> constructReward(ResourceLocation rewardId, JsonObject json) {
         if (!questRewardFactories.containsKey(rewardId)) return Optional.empty();
         return Optional.ofNullable(questRewardFactories.get(rewardId).create(json));
+    }
+
+    @Override
+    protected void apply(Map<ResourceLocation, JsonElement> files, ResourceManager resourceManager, ProfilerFiller profiler) {
+        Map<ResourceLocation, Quest> merged = new LinkedHashMap<>();
+
+        files.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .forEach(entry -> {
+                    try {
+                        JsonArray json = (JsonArray) entry.getValue();
+                        json.forEach(questJson -> loadQuest(questJson.getAsJsonObject()).ifPresent(quest -> {
+                            Quest previous = merged.put(quest.questId, quest);
+                            if (previous != null)
+                                QuestsLib.getLogger().warn("WARNING IN FILE {} : Quest {} has already been defined.", entry.getKey(), quest.getQuestId());
+                        }));
+                    } catch (Exception e) {
+                        QuestsLib.getLogger().error("Cannot load quest file {}\n{}", entry.getKey().toString(), e.toString());
+                    }
+                });
+
+        QuestsManager.setQuests(merged);
     }
 }

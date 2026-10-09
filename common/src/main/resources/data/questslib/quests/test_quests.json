@@ -98,6 +98,60 @@
           }
         ]
       }
+    ],
+    "rewards": []
+  },
+  {
+    "id": "questslib:quest_3",
+    "name": "djzhiagduizehdbui",
+    "description": "gydzebhjqgdyuqzedgyuqsdgyuzseqbfhjkseg",
+    "tasks": [
+      {
+        "task": "questslib:stat",
+        "id": "questslib:task_kill_vexes",
+        "stat_type": "killed_mobs",
+        "target": "minecraft:vex",
+        "amount": 67,
+        "name": "Kill Vexes",
+        "rewards": [
+          {
+            "reward": "questslib:loot_table",
+            "loot_table": "minecraft:chests/simple_dungeon"
+          }
+        ]
+      },
+      {
+        "task": "questslib:all",
+        "id": "questslib:task_composite_1",
+        "subtasks": [
+          {
+            "task": "questslib:location",
+            "id": "questslib:task_go_to_mansion",
+            "location_type": "structure",
+            "location": "minecraft:mansion"
+          },
+          {
+            "task": "questslib:stat",
+            "id": "questslib:task_break_67_infested_cobblestone",
+            "stat_type": "broken_blocks",
+            "target": "minecraft:infested_cobblestone",
+            "amount": 67
+          }
+        ],
+        "rewards": [
+          {
+            "reward": "sample_combat:reputation",
+            "faction": "villageois",
+            "points": 100
+          }
+        ]
+      }
+    ],
+    "rewards": [
+      {
+        "reward": "questslib:experience",
+        "levels": 0.67
+      }
     ]
   }
 ]

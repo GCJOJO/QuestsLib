@@ -1,19 +1,21 @@
 package io.github.gcjojo.questslib.quests;
 
-import dev.architectury.platform.Platform;
 import io.github.gcjojo.liblib.LibLib;
 import io.github.gcjojo.questslib.QuestPlayerSaveData;
 import io.github.gcjojo.questslib.QuestsLib;
 import io.github.gcjojo.questslib.quests.enums.QuestCompletionState;
 import lombok.Getter;
+import lombok.Setter;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.player.Player;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 
 public class QuestsManager {
     @Getter
+    @Setter
     public static Map<ResourceLocation, Quest> quests = new HashMap<>();
     public static Map<Player, PlayerQuestDataMap> playersData = new HashMap<>();
     public static Map<Player, PlayerQuestTriggerDataMap> playerTriggersData = new HashMap<>();
@@ -63,13 +65,13 @@ public class QuestsManager {
         getPlayerQuestData(player, questId).ifPresent(playerQuestData -> playerQuestData.setCompletionState(QuestCompletionState.Started));
     }
 
-    public static void loadQuests(MinecraftServer server) {
+    /*public static void loadQuests(MinecraftServer server) {
         List<String> namespaces = new ArrayList<>(Platform.getModIds());
         namespaces.addAll(server.getResourceManager().getNamespaces());
 
         namespaces.forEach(namespace -> quests.putAll(QuestLoader.loadQuestFile(server, namespace)));
         QuestsLib.getLogger().info("Loaded {} quest(s) !", quests.size());
-    }
+    }*/
 
     public static Optional<Quest> getQuest(ResourceLocation questId) {
         return Optional.ofNullable(quests.getOrDefault(questId, null));

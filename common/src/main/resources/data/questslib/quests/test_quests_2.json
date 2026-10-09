@@ -1,0 +1,11 @@
+[
+  {
+    "id": "questslib:quest_4",
+    "name": "my fourth quest",
+    "description": "this is my fourth quest and it is defined in another file !",
+    "tasks": [
+    ],
+    "rewards": [
+    ]
+  }
+]

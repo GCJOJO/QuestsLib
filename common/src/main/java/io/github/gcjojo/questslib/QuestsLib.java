@@ -1,6 +1,7 @@
 package io.github.gcjojo.questslib;
 
 import com.mojang.logging.LogUtils;
+import dev.architectury.registry.ReloadListenerRegistry;
 import io.github.gcjojo.liblib.LibLib;
 import io.github.gcjojo.liblib.api.QuestsLibAPI;
 import io.github.gcjojo.liblib.factory.PlayerDataRegistry;
@@ -11,6 +12,8 @@ import io.github.gcjojo.questslib.quests.GameEventsListener;
 import io.github.gcjojo.questslib.quests.QuestLoader;
 import io.github.gcjojo.questslib.quests.QuestsManager;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.packs.PackType;
 import org.slf4j.Logger;
 
 import java.util.Arrays;
@@ -46,6 +49,8 @@ public final class QuestsLib {
 
         QuestsNetwork.registerPayloadTypes();
         QuestsNetwork.registerPackets();
+
+        ReloadListenerRegistry.register(PackType.SERVER_DATA, new QuestLoader(), ResourceLocation.fromNamespaceAndPath(QuestsLib.MOD_ID, "quests"));
     }
 
     public static void initClient() {

@@ -41,7 +41,7 @@ import java.util.Map;
 public class GameEventsListener {
 
     public static void onServerLevelLoad(ServerLevel serverLevel) {
-        QuestsManager.loadQuests(serverLevel.getServer());
+        //QuestsManager.loadQuests(serverLevel.getServer());
     }
 
     public static void onPlayerJoin(ServerPlayer player) {
