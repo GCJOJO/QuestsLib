@@ -37,8 +37,12 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 
 import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class GameEventsListener {
+
+    private static Map<UUID, ItemStack> PICKUP_STACKS = new ConcurrentHashMap<UUID, ItemStack>();
 
     public static void onServerLevelLoad(ServerLevel serverLevel) {
         //QuestsManager.loadQuests(serverLevel.getServer());
@@ -58,6 +62,12 @@ public class GameEventsListener {
 
         PlayerEvent.PLAYER_JOIN.register(GameEventsListener::onPlayerJoin);
         PlayerEvent.PLAYER_QUIT.register(GameEventsListener::onPlayerLeave);
+
+        PlayerEvent.PICKUP_ITEM_PRE.register(((player, entity, stack) ->
+        {
+            PICKUP_STACKS.put(player.getUUID(), stack.copy());
+            return EventResult.pass();
+        }));
 
         PlayerEvent.PICKUP_ITEM_POST.register(GameEventsListener::onPlayerPickupItem);
         LibLibEvents.PLAYER_INVENTORY_CHANGED.register(GameEventsListener::onPlayerInventoryChanged);
@@ -174,41 +184,6 @@ public class GameEventsListener {
             LocationTask.LocationTaskData locationTaskData = (LocationTask.LocationTaskData) taskData;
             locationTaskData.setHasVisitedLocation(true);
         });
-
-        /*if (questData.getCompletionState() == QuestCompletionState.None || questData.getCompletionState() == QuestCompletionState.Completed)
-            return;
-        ResourceLocation questId = questData.getQuestId();
-        Quest quest = QuestsManager.getQuest(questId).orElse(null);
-        if (quest == null) return;
-
-        QuestTask task = questData.getCurrentTask().orElse(null);
-        if (task == null) return;
-
-        ServerLevel level = (ServerLevel) player.level();
-        if (task.getTaskType() == TaskType.Location) {
-            LocationTask locationTask = (LocationTask) task;
-            if (locationTask.getLocationTaskType() != type || !locationTask.locationMatch(level, locationId)) return;
-            if (!(questData.getCurrentTaskData() instanceof LocationTask.LocationTaskData locationData)) return;
-            locationData.setHasVisitedLocation(true);
-        } else if (task.getTaskType() == TaskType.Any || task.getTaskType() == TaskType.All) {
-            CompositeTask compositeTask = (CompositeTask) task;
-            if (!(questData.getCurrentTaskData() instanceof CompositeTask.CompositeTaskData<? extends CompositeTask> compositeData))
-                return;
-
-            compositeTask.getSubtasks().keySet().stream().filter(
-                    subtask -> subtask.getTaskType() == TaskType.Location &&
-                            subtask instanceof LocationTask locationTask &&
-                            locationTask.getLocationTaskType() == type &&
-                            locationTask.locationMatch(level, locationId)).forEach(subtask ->
-                    compositeData.getSubtaskData(subtask.getTaskId()).ifPresent(subtaskData -> {
-                        if (!(subtaskData instanceof LocationTask.LocationTaskData locationTaskData)) return;
-                        locationTaskData.setHasVisitedLocation(true);
-                        if (locationTaskData.checkProgression())
-                            subtask.rewardPlayer(player);
-                    }));
-        }
-
-        onTaskUpdate(player, questId, task.getTaskId(), questData);*/
     }
 
     public static void onDialogueTaskUpdated(ServerPlayer player, PlayerQuestData questData, ResourceLocation dialogueId) {
@@ -226,17 +201,24 @@ public class GameEventsListener {
         });
     }
 
-    public static void onPlayerPickupItem(Player player, ItemEntity itemEntity, ItemStack stack) {
+    public static void onPlayerPickupItem(Player player, ItemEntity itemEntity, ItemStack remaining) {
         if (!QuestsManager.playersData.containsKey(player)) return;
+
+        ItemStack stack = PICKUP_STACKS.remove(player.getUUID());
+        if (stack == null) return;
 
         QuestsManager.PlayerQuestDataMap dataMap = QuestsManager.playersData.get(player);
         ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
-        int stackAmount = stack.getCount();
+        int pickedAmount = stack.getCount() - remaining.getCount();
+
+        if (pickedAmount <= 0) return;
+
         dataMap.forEach((questId, questData) -> {
-            if (isStackUsedForQuest(stack, player, questId)) return;
-            onStatTaskUpdate(player, questData, itemId, stackAmount, StatTaskType.Item);
-            markStackAsUsedForQuest(stack, player, questId);
+            //if (isStackUsedForQuest(stack, player, questId)) return;
+            onStatTaskUpdate(player, questData, itemId, pickedAmount, StatTaskType.Item);
+            //markStackAsUsedForQuest(stack, player, questId);
         });
+        return;
     }
 
     public static void onPlayerCraftItem(Player player, ItemStack stack, Container inventory) {
@@ -246,9 +228,9 @@ public class GameEventsListener {
         ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
         int stackAmount = stack.getCount();
         dataMap.forEach((questId, questData) -> {
-            if (isStackUsedForQuest(stack, player, questId)) return;
+            //if (isStackUsedForQuest(stack, player, questId)) return;
             onStatTaskUpdate(player, questData, itemId, stackAmount, StatTaskType.Craft);
-            markStackAsUsedForQuest(stack, player, questId);
+            //markStackAsUsedForQuest(stack, player, questId);
         });
     }
 
