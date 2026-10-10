@@ -42,7 +42,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class GameEventsListener {
 
-    private static Map<UUID, ItemStack> PICKUP_STACKS = new ConcurrentHashMap<UUID, ItemStack>();
+    private static final Map<UUID, ItemStack> PICKUP_STACKS = new ConcurrentHashMap<UUID, ItemStack>();
 
     public static void onServerLevelLoad(ServerLevel serverLevel) {
         //QuestsManager.loadQuests(serverLevel.getServer());
@@ -138,47 +138,10 @@ public class GameEventsListener {
             StatTask.StatTaskData statTaskData = (StatTask.StatTaskData) taskData;
             statTaskData.addAmount(amount);
         });
-
-        /*if (questData.getCompletionState() == QuestCompletionState.None || questData.getCompletionState() == QuestCompletionState.Completed)
-            return;
-
-        ResourceLocation questId = questData.getQuestId();
-        Quest quest = QuestsManager.getQuest(questId).orElse(null);
-        if (quest == null) return;
-
-        QuestTask task = questData.getCurrentTask().orElse(null);
-        if (task == null) return;
-
-        if (task.getTaskType() == TaskType.Stat) {
-            StatTask statTask = (StatTask) task;
-            if (statTask.getStatType() != type || !statTask.getTargetId().equals(targetId)) return;
-
-            if (!(questData.getCurrentTaskData() instanceof StatTask.StatTaskData statData)) return;
-
-            statData.addAmount(amount);
-        } else if (task.getTaskType() == TaskType.Any || task.getTaskType() == TaskType.All) {
-            CompositeTask compositeTask = (CompositeTask) task;
-            if (!(questData.getCurrentTaskData() instanceof CompositeTask.CompositeTaskData<? extends CompositeTask> compositeData))
-                return;
-
-            compositeTask.getSubtasks().keySet().stream().filter(
-                    subtask -> subtask.getTaskType() == TaskType.Stat &&
-                            subtask instanceof StatTask statSubtask &&
-                            statSubtask.getStatType() == type &&
-                            statSubtask.getTargetId().equals(targetId)).forEach(subtask ->
-                    compositeData.getSubtaskData(subtask.getTaskId()).ifPresent(subtaskData -> {
-                        if (!(subtaskData instanceof StatTask.StatTaskData subStatTaskData)) return;
-                        subStatTaskData.addAmount(amount);
-                        if (subStatTaskData.checkProgression())
-                            subtask.rewardPlayer(player);
-                    }));
-        }
-
-        onTaskUpdate(player, questId, task.getTaskId(), questData);*/
     }
 
     public static void onLocationTaskUpdated(ServerPlayer player, PlayerQuestData questData, ResourceLocation locationId, LocationTaskType type) {
-        ServerLevel level = (ServerLevel) player.level();
+        ServerLevel level = player.serverLevel();
 
         updateTask(player, questData, (task -> GameEventsListener.checkLocationTask(task, locationId, type, level)), (taskData) -> {
             LocationTask.LocationTaskData locationTaskData = (LocationTask.LocationTaskData) taskData;
